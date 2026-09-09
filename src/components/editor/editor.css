@@ -1,160 +1,329 @@
-/* TipTap Parallel Note Editor Styles */
-.tiptap {
+/*
+  Note prose.
+
+  Notes are read far more often than they are written, so the note body is set
+  in Literata — a face designed for long-form screen reading — while every
+  control around it stays in the chrome sans. The measure is capped so a wide
+  split ratio cannot produce 140-character lines.
+*/
+
+.note-surface {
+	display: flex;
 	min-height: 100%;
+	flex-direction: column;
+}
+
+.note-prose {
+	flex: 1;
+	max-width: 68ch;
+	padding: 1.15rem 1.25rem;
+	font-family: var(--font-serif);
+	font-size: 0.9375rem;
+	font-optical-sizing: auto;
+	line-height: 1.7;
+	color: var(--ink);
 	outline: none;
-	color: var(--sea-ink);
-	font-size: 0.95rem;
-	line-height: 1.65;
+	overflow-wrap: break-word;
 }
 
-.tiptap p {
-	margin-top: 0.5em;
-	margin-bottom: 0.5em;
+.note-prose > * + * {
+	margin-top: 0.7em;
 }
 
-.tiptap p.is-editor-empty:first-child::before {
+.note-prose p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
 	height: 0;
 	pointer-events: none;
-	color: var(--sea-ink-soft);
-	opacity: 0.6;
-	font-style: italic;
+	color: var(--ink-3);
+	font-family: var(--font-sans);
+	font-size: 0.8125rem;
 }
 
-.tiptap h1 {
-	font-family: "Fraunces", Georgia, serif;
-	font-size: 1.65rem;
-	font-weight: 700;
-	color: var(--sea-ink);
-	margin-top: 1.2em;
-	margin-bottom: 0.4em;
-	line-height: 1.25;
-	border-bottom: 1px solid var(--line);
-	padding-bottom: 0.3em;
-}
-
-.tiptap h2 {
-	font-family: "Fraunces", Georgia, serif;
-	font-size: 1.35rem;
-	font-weight: 650;
-	color: var(--sea-ink);
-	margin-top: 1em;
-	margin-bottom: 0.35em;
-	line-height: 1.3;
-}
-
-.tiptap h3 {
-	font-size: 1.12rem;
+/* Headings sit in the chrome face: they label the note, they are not prose. */
+.note-prose h1,
+.note-prose h2,
+.note-prose h3 {
+	font-family: var(--font-sans);
 	font-weight: 600;
-	color: var(--lagoon-deep);
-	margin-top: 0.85em;
-	margin-bottom: 0.3em;
+	letter-spacing: -0.011em;
+	line-height: 1.3;
+	color: var(--ink);
 }
 
-.tiptap ul {
-	list-style-type: disc;
-	padding-left: 1.4rem;
-	margin-top: 0.4em;
-	margin-bottom: 0.4em;
+.note-prose h1 {
+	margin-top: 1.3em;
+	font-size: 1.3125rem;
 }
 
-.tiptap ol {
-	list-style-type: decimal;
-	padding-left: 1.4rem;
-	margin-top: 0.4em;
-	margin-bottom: 0.4em;
+.note-prose h2 {
+	margin-top: 1.25em;
+	font-size: 1.0625rem;
 }
 
-.tiptap li {
+.note-prose h3 {
+	margin-top: 1.15em;
+	font-size: 0.9375rem;
+	color: var(--ink-2);
+}
+
+.note-prose h1:first-child,
+.note-prose h2:first-child,
+.note-prose h3:first-child {
+	margin-top: 0;
+}
+
+.note-prose ul,
+.note-prose ol {
+	padding-left: 1.35rem;
+}
+
+.note-prose ul {
+	list-style: disc;
+}
+
+.note-prose ol {
+	list-style: decimal;
+}
+
+.note-prose li::marker {
+	color: var(--ink-3);
+}
+
+.note-prose li > * + * {
+	margin-top: 0.35em;
+}
+
+.note-prose li + li {
 	margin-top: 0.2em;
-	margin-bottom: 0.2em;
 }
 
-.tiptap blockquote {
-	border-left: 3px solid var(--lagoon);
-	padding-left: 1rem;
-	margin: 0.8em 0;
-	color: var(--sea-ink-soft);
-	font-style: italic;
-	background: color-mix(in oklab, var(--lagoon) 6%, transparent);
-	border-radius: 0 6px 6px 0;
-	padding-top: 0.3em;
-	padding-bottom: 0.3em;
+/*
+  A quote in a reading note is nearly always an excerpt from the page on the
+  left, so it is marked with the highlighter rather than the accent.
+*/
+.note-prose blockquote {
+	margin-inline: 0;
+	border-left: 2px solid var(--marker);
+	padding: 0.15rem 0 0.15rem 0.9rem;
+	color: var(--ink-2);
 }
 
-.tiptap code {
-	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-size: 0.875em;
-	background: color-mix(in oklab, var(--surface-strong) 85%, var(--sand));
-	border: 1px solid var(--line);
+.note-prose blockquote p {
+	margin: 0;
+}
+
+.note-prose blockquote > * + * {
+	margin-top: 0.5em;
+}
+
+.note-prose a {
+	color: var(--quill);
+	text-decoration: underline;
+	text-decoration-color: color-mix(in oklab, var(--quill) 40%, transparent);
+	text-underline-offset: 2px;
+	cursor: pointer;
+}
+
+.note-prose a:hover {
+	text-decoration-color: var(--quill);
+}
+
+.note-prose mark {
+	background: var(--highlight-bg);
+	color: var(--highlight-ink);
+	border-radius: 2px;
+	padding: 0.05em 0.15em;
+	box-decoration-break: clone;
+}
+
+.note-prose code {
+	font-family: var(--font-mono);
+	font-size: 0.8125em;
+	background: var(--surface-2);
+	border: 1px solid var(--rule);
 	border-radius: 4px;
-	padding: 0.15em 0.4em;
-	color: var(--palm);
+	padding: 0.1em 0.32em;
+	color: var(--ink);
 }
 
-.tiptap pre {
-	background: #182834;
-	color: #e2f1ec;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-size: 0.88rem;
-	padding: 0.85rem 1rem;
-	border-radius: 8px;
-	margin: 0.8em 0;
+.note-prose pre {
+	background: var(--surface-2);
+	border: 1px solid var(--rule);
+	border-radius: var(--radius-control);
+	padding: 0.75rem 0.9rem;
 	overflow-x: auto;
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	line-height: 1.6;
+	color: var(--ink);
 }
 
-.tiptap pre code {
-	background: transparent;
-	border: none;
+.note-prose pre code {
+	background: none;
+	border: 0;
 	padding: 0;
-	color: inherit;
 	font-size: inherit;
 }
 
-.tiptap hr {
-	border: none;
-	border-top: 1px solid var(--line);
-	margin: 1.2em 0;
+.note-prose hr {
+	border: 0;
+	border-top: 1px solid var(--rule);
+	margin-block: 1.4em;
 }
 
-/* Bubble Menu Toolbar */
-.editor-bubble-menu {
-	display: flex;
-	align-items: center;
-	gap: 2px;
-	background: var(--surface-strong);
-	backdrop-filter: blur(12px);
-	border: 1px solid var(--line);
-	border-radius: 8px;
-	padding: 3px 5px;
-	box-shadow:
-		0 10px 25px -5px rgba(23, 58, 64, 0.15),
-		0 4px 10px -2px rgba(23, 58, 64, 0.08);
-	z-index: 50;
+/* Checklists */
+.note-prose ul[data-type="taskList"] {
+	list-style: none;
+	padding-left: 0;
 }
 
-.editor-bubble-btn {
+.note-prose ul[data-type="taskList"] li {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.55rem;
+}
+
+.note-prose ul[data-type="taskList"] li > label {
 	display: flex;
 	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	border-radius: 5px;
-	border: none;
-	background: transparent;
-	color: var(--sea-ink-soft);
+	height: 1.7em;
+	user-select: none;
+}
+
+.note-prose ul[data-type="taskList"] li > div {
+	flex: 1;
+	min-width: 0;
+}
+
+.note-prose input[type="checkbox"] {
+	appearance: none;
+	width: 0.95rem;
+	height: 0.95rem;
+	border: 1.5px solid var(--rule-strong);
+	border-radius: 4px;
+	background: var(--surface);
 	cursor: pointer;
-	transition: all 140ms ease;
+	display: grid;
+	place-content: center;
+	transition:
+		background-color 130ms ease,
+		border-color 130ms ease;
 }
 
-.editor-bubble-btn:hover {
-	background: color-mix(in oklab, var(--lagoon) 18%, transparent);
-	color: var(--sea-ink);
+.note-prose input[type="checkbox"]::after {
+	content: "";
+	width: 0.5rem;
+	height: 0.28rem;
+	border-left: 2px solid var(--surface);
+	border-bottom: 2px solid var(--surface);
+	transform: rotate(-45deg) translate(1px, -1px);
+	opacity: 0;
 }
 
-.editor-bubble-btn.is-active {
-	background: var(--lagoon);
-	color: white;
+.note-prose input[type="checkbox"]:checked {
+	background: var(--quill);
+	border-color: var(--quill);
+}
+
+.note-prose input[type="checkbox"]:checked::after {
+	opacity: 1;
+}
+
+.note-prose ul[data-type="taskList"] li[data-checked="true"] > div {
+	color: var(--ink-3);
+	text-decoration: line-through;
+	text-decoration-color: var(--rule-strong);
+}
+
+/* Tables */
+.note-prose .tableWrapper {
+	overflow-x: auto;
+	margin-block: 1em;
+}
+
+.note-prose table {
+	width: 100%;
+	border-collapse: collapse;
+	table-layout: fixed;
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+}
+
+.note-prose th,
+.note-prose td {
+	position: relative;
+	min-width: 4.5rem;
+	border: 1px solid var(--rule);
+	padding: 0.4rem 0.55rem;
+	vertical-align: top;
+}
+
+.note-prose th {
+	background: var(--surface-2);
+	font-weight: 600;
+	text-align: left;
+}
+
+.note-prose th p,
+.note-prose td p {
+	margin: 0;
+}
+
+.note-prose .selectedCell::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	pointer-events: none;
+	background: color-mix(in oklab, var(--quill) 14%, transparent);
+}
+
+.note-prose .column-resize-handle {
+	position: absolute;
+	top: 0;
+	right: -2px;
+	bottom: -1px;
+	z-index: 20;
+	width: 3px;
+	background: var(--quill);
+	pointer-events: none;
+}
+
+.note-prose.resize-cursor {
+	cursor: col-resize;
+}
+
+/* Math */
+.note-prose .tiptap-mathematics-render {
+	cursor: pointer;
+	border-radius: 4px;
+	padding: 0 0.15em;
+}
+
+.note-prose .tiptap-mathematics-render--editable:hover {
+	background: var(--quill-soft);
+}
+
+.note-prose [data-type="block-math"] {
+	display: block;
+	overflow-x: auto;
+	padding-block: 0.35rem;
+	text-align: center;
+}
+
+.note-prose .katex {
+	font-size: 1.02em;
+}
+
+/* ProseMirror selection affordances */
+.note-prose .ProseMirror-gapcursor:after {
+	border-top-color: var(--ink);
+}
+
+.note-prose img.ProseMirror-selectednode,
+.note-prose .ProseMirror-selectednode {
+	outline: 2px solid var(--quill);
+	outline-offset: 2px;
+	border-radius: 3px;
 }

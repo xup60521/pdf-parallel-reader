@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import TanStackQueryDevtools from "../integrations/tanstack-query/devtools";
+import { themeBootstrapScript } from "../lib/theme";
 import appCss from "../styles.css?url";
 
 interface MyRouterContext {
@@ -26,6 +27,17 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 			{
 				title: "Parallel PDF Reader",
 			},
+			{
+				name: "description",
+				content:
+					"Read a PDF and write notes about the page you are on, side by side. Everything stays in your browser.",
+			},
+			// A single tag: React dedupes `theme-color` by name, so the two
+			// media-scoped variants collapse into one. applyTheme keeps it current.
+			{
+				name: "theme-color",
+				content: "#e8e8ef",
+			},
 		],
 		links: [
 			{
@@ -39,9 +51,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		<html lang="en" suppressHydrationWarning>
 			<head>
 				<HeadContent />
+				{/* Applies the stored theme before first paint so nothing flashes. */}
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: fixed, non-user-derived bootstrap script. */}
+				<script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
 			</head>
 			<body>
 				{children}

@@ -1,0 +1,78 @@
+/*
+  Selectable text overlay for a rendered page, so a quotation can be dragged
+  straight from the paper into the note beside it. Trimmed from pdf.js's
+  `web/pdf_viewer.css` to just the text layer; the rest of that stylesheet
+  belongs to a viewer chrome this app does not use.
+*/
+
+.pdf-text-layer {
+	color-scheme: only light;
+	position: absolute;
+	inset: 0;
+	text-align: initial;
+	overflow: clip;
+	opacity: 1;
+	line-height: 1;
+	letter-spacing: normal;
+	word-spacing: normal;
+	text-size-adjust: none;
+	forced-color-adjust: none;
+	transform-origin: 0 0;
+	caret-color: CanvasText;
+	z-index: 1;
+
+	--min-font-size: 1;
+	--text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+	--min-font-size-inv: calc(1 / var(--min-font-size));
+}
+
+.pdf-text-layer :is(span, br) {
+	color: transparent;
+	position: absolute;
+	white-space: pre;
+	cursor: text;
+	transform-origin: 0% 0%;
+	user-select: text;
+}
+
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+	z-index: 1;
+	--font-height: 0;
+	font-size: calc(var(--text-scale-factor) * var(--font-height));
+	--scale-x: 1;
+	--rotate: 0deg;
+	transform: rotate(var(--rotate)) scaleX(var(--scale-x))
+		scale(var(--min-font-size-inv));
+}
+
+.pdf-text-layer .markedContent {
+	display: contents;
+}
+
+.pdf-text-layer span[role="img"] {
+	user-select: none;
+	cursor: default;
+}
+
+.pdf-text-layer ::selection {
+	background: color-mix(in srgb, var(--quill), transparent 68%);
+	color: transparent;
+}
+
+.pdf-text-layer br::selection {
+	background: transparent;
+}
+
+.pdf-text-layer .endOfContent {
+	display: block;
+	position: absolute;
+	inset: 100% 0 0;
+	z-index: 0;
+	cursor: default;
+	user-select: none;
+}
+
+.pdf-text-layer.selecting .endOfContent {
+	top: 0;
+}

@@ -1,145 +1,133 @@
-import { Loader2 } from "lucide-react";
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
+import { getPdfjs } from "../../lib/pdf-service";
+import "./pdf-page.css";
 
 interface PdfPageViewProps {
 	pdfDoc: PDFDocumentProxy;
 	pageNumber: number;
-	scale?: number;
-	onDimensionsChange?: (
-		pageNumber: number,
-		width: number,
-		height: number,
-	) => void;
+	/** Rendered width in CSS pixels. The page always fits exactly. */
+	width: number;
+	onAspectRatio?: (pageNumber: number, ratio: number) => void;
 }
 
+/**
+ * Renders one page at exactly the width it is given, so a page can never
+ * overflow its column or float undersized inside it. Zoom is applied by the
+ * reader as a multiplier on the available column width, not as a raw PDF scale.
+ */
 export function PdfPageView({
 	pdfDoc,
 	pageNumber,
-	scale = 1.0,
-	onDimensionsChange,
+	width,
+	onAspectRatio,
 }: PdfPageViewProps) {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const [isLoading, setIsLoading] = useState(true);
-	const [dimensions, setDimensions] = useState<{
-		width: number;
-		height: number;
-	}>({
-		width: 595,
-		height: 842,
-	});
+	const textLayerRef = useRef<HTMLDivElement>(null);
 	const renderTaskRef = useRef<RenderTask | null>(null);
+	const [height, setHeight] = useState<number | null>(null);
+	const [failed, setFailed] = useState(false);
+
+	const onAspectRatioRef = useRef(onAspectRatio);
+	onAspectRatioRef.current = onAspectRatio;
 
 	useEffect(() => {
-		let isCancelled = false;
+		let cancelled = false;
 
-		async function renderPage() {
-			if (!canvasRef.current || !pdfDoc) return;
+		async function render() {
+			const canvas = canvasRef.current;
+			if (!canvas || width <= 0) return;
 
-			setIsLoading(true);
-
-			// Cancel any ongoing render task
-			if (renderTaskRef.current) {
-				try {
-					renderTaskRef.current.cancel();
-				} catch {
-					// ignore cancel error
-				}
-				renderTaskRef.current = null;
-			}
+			renderTaskRef.current?.cancel();
+			renderTaskRef.current = null;
 
 			try {
 				const page = await pdfDoc.getPage(pageNumber);
-				if (isCancelled) return;
+				if (cancelled) return;
 
-				const pixelRatio =
-					typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+				const natural = page.getViewport({ scale: 1 });
+				const scale = width / natural.width;
 				const viewport = page.getViewport({ scale });
+				const cssHeight = Math.round(viewport.height);
 
-				const displayWidth = Math.floor(viewport.width);
-				const displayHeight = Math.floor(viewport.height);
+				setHeight(cssHeight);
+				onAspectRatioRef.current?.(pageNumber, natural.height / natural.width);
 
-				setDimensions({ width: displayWidth, height: displayHeight });
-				if (onDimensionsChange) {
-					onDimensionsChange(pageNumber, displayWidth, displayHeight);
+				const ratio = window.devicePixelRatio || 1;
+				canvas.width = Math.floor(viewport.width * ratio);
+				canvas.height = Math.floor(viewport.height * ratio);
+				canvas.style.width = `${Math.round(viewport.width)}px`;
+				canvas.style.height = `${cssHeight}px`;
+
+				const context = canvas.getContext("2d", { alpha: false });
+				if (!context) return;
+				context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+				const task = page.render({ canvas, canvasContext: context, viewport });
+				renderTaskRef.current = task;
+				await task.promise;
+				if (cancelled) return;
+
+				// The text layer is what makes a quotation draggable into the note.
+				const container = textLayerRef.current;
+				if (container) {
+					container.replaceChildren();
+					container.style.setProperty("--total-scale-factor", String(scale));
+					container.style.width = `${Math.round(viewport.width)}px`;
+					container.style.height = `${cssHeight}px`;
+
+					const { TextLayer } = await getPdfjs();
+					if (cancelled) return;
+					await new TextLayer({
+						textContentSource: page.streamTextContent(),
+						container,
+						viewport,
+					}).render();
 				}
 
-				const canvas = canvasRef.current;
-				if (!canvas) return;
-
-				canvas.width = Math.floor(viewport.width * pixelRatio);
-				canvas.height = Math.floor(viewport.height * pixelRatio);
-				canvas.style.width = `${displayWidth}px`;
-				canvas.style.height = `${displayHeight}px`;
-
-				const ctx = canvas.getContext("2d", { alpha: false });
-				if (!ctx) return;
-
-				// Scale context to support high DPI displays
-				ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-
-				const renderContext = {
-					canvasContext: ctx,
-					viewport,
-				};
-
-				const renderTask = page.render(renderContext);
-				renderTaskRef.current = renderTask;
-
-				await renderTask.promise;
-				if (!isCancelled) {
-					setIsLoading(false);
+				setFailed(false);
+			} catch (error) {
+				if (
+					(error as { name?: string })?.name === "RenderingCancelledException"
+				) {
+					return;
 				}
-			} catch (err: unknown) {
-				const errorName = (err as { name?: string })?.name;
-				if (errorName !== "RenderingCancelledException") {
-					console.error(`Error rendering PDF page ${pageNumber}:`, err);
-				}
+				console.error(`Could not render page ${pageNumber}:`, error);
+				if (!cancelled) setFailed(true);
 			}
 		}
 
-		renderPage();
+		render();
 
 		return () => {
-			isCancelled = true;
-			if (renderTaskRef.current) {
-				try {
-					renderTaskRef.current.cancel();
-				} catch {
-					// ignore
-				}
-			}
+			cancelled = true;
+			renderTaskRef.current?.cancel();
+			renderTaskRef.current = null;
 		};
-	}, [pdfDoc, pageNumber, scale, onDimensionsChange]);
+	}, [pdfDoc, pageNumber, width]);
 
 	return (
-		<div className="relative flex flex-col items-center">
-			{/* Page frame with paper shadow */}
-			<div
-				className="relative overflow-hidden rounded-xl bg-white shadow-md border border-stone-200/80 transition-shadow hover:shadow-lg dark:border-stone-800 dark:bg-stone-900"
-				style={{
-					width: `${dimensions.width}px`,
-					minHeight: `${dimensions.height}px`,
-				}}
-			>
-				{/* Page top tag */}
-				<div className="absolute top-2 left-3 z-10 select-none rounded bg-stone-900/70 px-2 py-0.5 text-[11px] font-medium text-white/90 backdrop-blur-sm shadow-xs">
-					Page {pageNumber}
+		<div
+			className="sheet relative shrink-0 overflow-hidden"
+			style={{ width, height: height ?? undefined, minHeight: height ?? 200 }}
+		>
+			<canvas ref={canvasRef} className="block" />
+			{/*
+			  pdf.js owns this subtree. The runs are transparent but they are the
+			  only machine-readable form of the page, so they stay exposed to
+			  assistive technology rather than hidden behind aria-hidden.
+			*/}
+			<div ref={textLayerRef} className="pdf-text-layer" />
+			{failed && (
+				<div className="absolute inset-0 grid place-content-center gap-1 p-6 text-center">
+					<p className="text-ui font-medium text-ink">
+						Page {pageNumber} did not render
+					</p>
+					<p className="text-tiny text-ink-2">
+						The page data may be damaged. Other pages are unaffected.
+					</p>
 				</div>
-
-				{/* Loading overlay */}
-				{isLoading && (
-					<div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-stone-50/80 dark:bg-stone-900/80 backdrop-blur-[2px]">
-						<Loader2 className="size-6 animate-spin text-emerald-600 dark:text-emerald-400" />
-						<span className="mt-2 text-xs font-medium text-stone-500 dark:text-stone-400">
-							Rendering page {pageNumber}...
-						</span>
-					</div>
-				)}
-
-				{/* Canvas */}
-				<canvas ref={canvasRef} className="block mx-auto" />
-			</div>
+			)}
 		</div>
 	);
 }

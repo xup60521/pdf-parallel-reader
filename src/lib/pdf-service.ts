@@ -52,6 +52,7 @@ export async function generateThumbnail(
 		if (!ctx) return undefined;
 
 		await page.render({
+			canvas,
 			canvasContext: ctx,
 			viewport,
 		}).promise;

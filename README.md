@@ -6,22 +6,42 @@ A local-first web application for synchronized PDF reading and page-coupled Mark
 
 ## Features
 
-- **Synchronized Parallel Layout**: Left panel renders the PDF page, right panel provides a page-coupled Markdown editor.
-- **Adaptive Note Height**: When Markdown notes outpace the height of a PDF page, the page stays pinned sticky at the top while the note expands smoothly, with subsequent pages aligned directly beneath.
-- **Local-First & Offline**: PDFs and Markdown notes are stored locally in the browser with [Dexie.js](https://dexie.js.org/) (IndexedDB). No cloud upload required.
-- **Rich Markdown Editor**: TipTap-based visual editor with floating bubble menu, syntax blocks, headings, lists, raw Markdown toggle, and Markdown paste conversion.
-- **Navigation & Controls**: Quick jump-to-page bar, PDF zoom controls, and adjustable split ratios (`50:50`, `PDF+`, `Notes+`).
-- **Exporting**: 1-click Markdown export of all notes for any document or quick copy to clipboard.
-- **Document Library**: Overview dashboard with drag-and-drop PDF upload and automated thumbnail generation.
+- **Page and note, locked together.** Every PDF page has its own Markdown note beside it, joined by a
+  ruled spine that carries the page number and marks the pages you have annotated.
+- **The page always fits.** Pages render to the width of their column, so they never overflow the row
+  or float undersized inside it. Zoom scales from that fit and overflows only inside the page column.
+- **The page pins while the note grows.** When a note outruns its page, the page holds at the top of
+  the viewport and the note scrolls past it, with the following pages aligned underneath.
+- **Selectable page text.** A text layer sits over each rendered page, so a quotation can be selected
+  from the paper and dropped straight into the note beside it.
+- **Long documents stay cheap.** Only the rows near the viewport render a canvas or mount an editor;
+  the rest hold their exact height, so scroll position never jumps.
+- **Thumbnail rail.** Real page previews with a mark on every annotated page, rendered on demand.
+- **Markdown editor without chrome.** A slash menu (`/`) for blocks and a selection bubble menu for
+  marks, plus headings, lists, checklists, tables, code, links, highlights, and KaTeX math. Markdown
+  pasted from anywhere keeps its structure, and a raw Markdown view is one click away.
+- **Local-first.** PDFs and notes live in this browser via [Dexie.js](https://dexie.js.org/)
+  (IndexedDB). Nothing is uploaded.
+- **Light and dark.** One palette, resolved before first paint, remembered between visits.
+- **Export.** Download or copy a whole document's notes as one Markdown file.
 
 ## Tech Stack
 
 - **Framework**: [TanStack Start](https://tanstack.com/start) & [React 19](https://react.dev/)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) & Lucide React icons
-- **Editor**: [TipTap](https://tiptap.dev/) (`@tiptap/core`, `@tiptap/react`, `@tiptap/starter-kit`) + Markdown serializer (`turndown`)
-- **PDF Rendering & Generation**: [PDF.js](https://mozilla.github.io/pdf.js/) (`pdfjs-dist`) & [pdf-lib](https://pdf-lib.js.org/)
+- **Editor**: [TipTap](https://tiptap.dev/) with `@tiptap/suggestion` and `@floating-ui/dom` for the
+  slash menu, KaTeX for math, and `markdown-it` / `turndown` for the Markdown round trip
+- **PDF Rendering & Generation**: [PDF.js](https://mozilla.github.io/pdf.js/) & [pdf-lib](https://pdf-lib.js.org/)
 - **Database**: [Dexie.js](https://dexie.js.org/) (IndexedDB)
 - **Tooling**: [Vite](https://vitejs.dev/) & [Biome](https://biomejs.dev/)
+
+## Keyboard
+
+| Keys | Action |
+| --- | --- |
+| `/` | Open the block menu in a note |
+| `Alt` + `↑` / `↓` | Move to the previous or next page |
+| `Ctrl`/`Cmd` + `B`, `I` | Bold, italic |
 
 ## Getting Started
 

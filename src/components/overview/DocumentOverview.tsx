@@ -1,17 +1,15 @@
 import {
-	BookOpen,
 	Download,
-	FileCheck,
 	FileText,
-	FileUp,
-	HardDrive,
 	Loader2,
 	Plus,
 	Sparkles,
 	Trash2,
+	Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
+	db,
 	deleteDocument,
 	exportDocumentNotesAsMarkdown,
 	getAllDocuments,
@@ -24,109 +22,187 @@ import {
 	generateThumbnail,
 	loadPdfDocument,
 } from "../../lib/pdf-service";
+import { cn } from "../../lib/utils";
+import { Button } from "../ui/Button";
+import { ThemeToggle } from "../ui/ThemeToggle";
 
 interface DocumentOverviewProps {
 	onSelectDocument: (docId: string) => void;
 }
 
+const DEMO_NOTES: Array<[number, string]> = [
+	[
+		1,
+		`## Consensus foundations
+
+- ==Replicated state machine safety== is the core problem.
+- **FLP (1985)**: no deterministic asynchronous protocol guarantees liveness with even one crash.
+
+> Partial synchrony or randomized timeouts are required to work around FLP.
+
+- [ ] Re-read the FLP proof sketch
+- [ ] Compare with the Chandra–Toueg failure detector result
+`,
+	],
+	[
+		2,
+		`## Raft, in detail
+
+Raft splits consensus into three orthogonal parts:
+
+1. Leader election
+2. Log replication
+3. Safety
+
+### Election
+
+Nodes start as \`Follower\`. With no heartbeat inside a randomized timeout of
+150–300 ms they become \`Candidate\` and issue \`RequestVote\`.
+
+\`\`\`ts
+interface RequestVoteResponse {
+  term: number;
+  voteGranted: boolean;
+}
+\`\`\`
+
+### Log invariants
+
+| Property | Guarantee |
+| --- | --- |
+| Same index and term | Same command |
+| Same index and term | All preceding entries identical |
+
+### Split votes
+
+Randomized timeouts make split votes rare, and the jitter means one candidate
+wakes first in the next round. Quorum size is $\\lfloor n/2 \\rfloor + 1$.
+
+Production notes:
+
+- [ ] Bound clock drift
+- [ ] Add pre-vote so a rejoining partition cannot disrupt the live leader
+`,
+	],
+	[
+		3,
+		`## Comparison
+
+- **Raft** — built for understandability, crash-fault tolerant.
+- **Multi-Paxos** — most historical adoption, hardest to implement correctly.
+- **EPaxos** — leaderless, removes the leader bottleneck for geo-replication.
+`,
+	],
+];
+
+function formatSize(bytes: number) {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(timestamp: number) {
+	return new Date(timestamp).toLocaleDateString(undefined, {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+	});
+}
+
 export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 	const [documents, setDocuments] = useState<PdfDocument[]>([]);
-	const [notesCountMap, setNotesCountMap] = useState<Record<string, number>>(
-		{},
-	);
+	const [noteCounts, setNoteCounts] = useState<Record<string, number>>({});
 	const [isLoading, setIsLoading] = useState(true);
-	const [isUploading, setIsUploading] = useState(false);
-	const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+	const [busyMessage, setBusyMessage] = useState<string | null>(null);
+	const [problem, setProblem] = useState<string | null>(null);
 	const [isDragOver, setIsDragOver] = useState(false);
-	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
-	const refreshDocuments = useCallback(async () => {
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const dropZoneId = useId();
+
+	const refresh = useCallback(async () => {
 		try {
 			const docs = await getAllDocuments();
 			setDocuments(docs);
 
-			// Fetch note counts for each document
 			const counts: Record<string, number> = {};
-			for (const doc of docs) {
-				const notes = await getNotesForPdf(doc.id);
-				const activeNotes = notes.filter(
-					(n) => n.contentMarkdown.trim().length > 0,
-				);
-				counts[doc.id] = activeNotes.length;
-			}
-			setNotesCountMap(counts);
-		} catch (err) {
-			console.error("Failed to load documents from IndexedDB:", err);
+			await Promise.all(
+				docs.map(async (doc) => {
+					const notes = await getNotesForPdf(doc.id);
+					counts[doc.id] = notes.filter(
+						(note) => note.contentMarkdown.trim().length > 0,
+					).length;
+				}),
+			);
+			setNoteCounts(counts);
+		} catch (error) {
+			console.error("Could not read the local library:", error);
+			setProblem(
+				"Your browser blocked local storage, so the library is empty.",
+			);
 		} finally {
 			setIsLoading(false);
 		}
 	}, []);
 
 	useEffect(() => {
-		refreshDocuments();
-	}, [refreshDocuments]);
+		refresh();
+	}, [refresh]);
 
-	// Process a PDF File (from upload or drop)
-	const handleProcessFile = async (file: File) => {
+	async function addDocument(file: File) {
 		if (!file.name.toLowerCase().endsWith(".pdf")) {
-			alert("Please upload a valid PDF file.");
+			setProblem(`${file.name} is not a PDF. Choose a file ending in .pdf.`);
 			return;
 		}
 
-		setIsUploading(true);
-		setUploadStatus("Reading file...");
+		setProblem(null);
+		setBusyMessage("Reading the file");
 
 		try {
-			const arrayBuffer = await file.arrayBuffer();
-			setUploadStatus("Parsing PDF structure...");
+			const buffer = await file.arrayBuffer();
+			setBusyMessage("Reading the page structure");
+			const pdf = await loadPdfDocument(buffer);
 
-			const pdfDoc = await loadPdfDocument(arrayBuffer);
-			const pageCount = pdfDoc.numPages;
+			setBusyMessage("Drawing the cover");
+			const thumbnail = await generateThumbnail(buffer);
 
-			setUploadStatus("Generating thumbnail...");
-			const thumbnail = await generateThumbnail(arrayBuffer);
-
-			const docId = `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-			const newDoc: PdfDocument = {
-				id: docId,
+			const id = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+			await db.documents.add({
+				id,
 				name: file.name,
 				size: file.size,
-				pageCount,
+				pageCount: pdf.numPages,
 				thumbnailDataUrl: thumbnail,
-				fileData: arrayBuffer,
+				fileData: buffer,
 				createdAt: Date.now(),
 				updatedAt: Date.now(),
-			};
+			});
 
-			// Store in Dexie IndexedDB
-			const { db } = await import("../../lib/db");
-			await db.documents.add(newDoc);
-
-			await refreshDocuments();
-			onSelectDocument(docId);
-		} catch (err) {
-			console.error("Error saving PDF to IndexedDB:", err);
-			alert("Could not parse the PDF. Please check if the file is corrupted.");
+			await refresh();
+			onSelectDocument(id);
+		} catch (error) {
+			console.error("Could not open this PDF:", error);
+			setProblem(
+				`${file.name} could not be opened. The file may be encrypted or damaged.`,
+			);
 		} finally {
-			setIsUploading(false);
-			setUploadStatus(null);
+			setBusyMessage(null);
 		}
-	};
+	}
 
-	// Handle Load Demo Document
-	const handleLoadDemoDoc = async () => {
-		setIsUploading(true);
-		setUploadStatus("Generating demo PDF...");
+	async function addDemoDocument() {
+		setProblem(null);
+		setBusyMessage("Building the sample paper");
 
 		try {
 			const sample = await createSamplePdf();
-			setUploadStatus("Generating thumbnail...");
+			setBusyMessage("Drawing the cover");
 			const thumbnail = await generateThumbnail(sample.fileData);
 
-			const docId = `doc_demo_${Date.now()}`;
-			const newDoc: PdfDocument = {
-				id: docId,
+			const id = `doc_demo_${Date.now()}`;
+			await db.documents.add({
+				id,
 				name: sample.name,
 				size: sample.fileData.byteLength,
 				pageCount: sample.pageCount,
@@ -134,324 +210,299 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 				fileData: sample.fileData,
 				createdAt: Date.now(),
 				updatedAt: Date.now(),
-			};
+			});
 
-			const { db } = await import("../../lib/db");
-			await db.documents.add(newDoc);
+			setBusyMessage("Writing the sample notes");
+			for (const [page, markdown] of DEMO_NOTES) {
+				await saveNoteForPage(id, page, markdown);
+			}
 
-			// Add pre-populated notes demonstrating the outpacing height feature
-			setUploadStatus("Populating sample notes...");
-			await saveNoteForPage(
-				docId,
-				1,
-				`# Notes: Consensus Foundations\n\n- **Core problem**: Replicated state machine safety.\n- **FLP Impossibility (1985)**: In an asynchronous network, no deterministic consensus protocol can guarantee liveness in the presence of even a single crash.\n\n> Key requirement: Partial synchrony or randomized timeouts are necessary to overcome FLP.\n`,
-			);
-
-			// Note 2 is intentionally long to demonstrate the outpacing height layout!
-			await saveNoteForPage(
-				docId,
-				2,
-				`# Raft Protocol Detailed Notes\n\n## 1. Subproblems Decomposition\n\nRaft simplifies consensus by decomposing it into 3 orthogonal parts:\n1. **Leader Election**\n2. **Log Replication**\n3. **Safety Guarantee**\n\n## 2. Election Mechanism\n\n- Nodes begin in \`Follower\` state.\n- If no heartbeat received within randomized timeout (150-300ms), transition to \`Candidate\`.\n- Vote request sent via \`RequestVote\` RPC.\n\n\`\`\`typescript\ninterface RequestVoteResponse {\n  term: number;\n  voteGranted: boolean;\n}\n\`\`\`\n\n## 3. Log Invariant Properties\n\n- If two entries in different logs have the same index and term, they store the same command.\n- If two entries in different logs have the same index and term, then their logs are identical in all preceding entries.\n\n## 4. Extended Analysis on Split Votes\n\nRandomized election timeouts drastically diminish the frequency of split votes.\nEven if a split occurs, the random jitter ensures that one candidate times out first in the subsequent round, winning a majority before competitors can reset.\n\n### Practical observations in Production:\n- Clock drift must remain within tight bounds.\n- Network partitions require pre-vote extensions to avoid disrupting the active leader when partitioned nodes rejoin.\n`,
-			);
-
-			await saveNoteForPage(
-				docId,
-				3,
-				`# Protocol Comparison Matrix\n\n- **Raft**: Designed for understandability and CFT.\n- **Multi-Paxos**: Highest historical adoption, but complex to implement correctly.\n- **EPaxos**: Leaderless design eliminates the leader bottleneck for geo-replication.\n`,
-			);
-
-			await refreshDocuments();
-			onSelectDocument(docId);
-		} catch (err) {
-			console.error("Failed to create demo document:", err);
-			alert("Error generating demo document.");
+			await refresh();
+			onSelectDocument(id);
+		} catch (error) {
+			console.error("Could not build the sample document:", error);
+			setProblem("The sample document could not be built.");
 		} finally {
-			setIsUploading(false);
-			setUploadStatus(null);
+			setBusyMessage(null);
 		}
-	};
+	}
 
-	// Delete Document
-	const handleDelete = async (docId: string, name: string) => {
-		if (
-			confirm(`Are you sure you want to delete "${name}" and all its notes?`)
-		) {
-			await deleteDocument(docId);
-			await refreshDocuments();
-		}
-	};
-
-	// Export Notes
-	const handleExport = async (docId: string, name: string) => {
+	async function removeDocument(id: string) {
 		try {
-			const md = await exportDocumentNotesAsMarkdown(docId);
-			const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = `${name.replace(/\.pdf$/i, "")}_notes.md`;
-			a.click();
-			URL.revokeObjectURL(url);
-		} catch (e) {
-			console.error("Export failed:", e);
+			await deleteDocument(id);
+			setPendingDelete(null);
+			await refresh();
+		} catch (error) {
+			console.error("Could not delete this document:", error);
+			setProblem("That document could not be deleted.");
 		}
-	};
+	}
 
-	const formatFileSize = (bytes: number) => {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	};
+	async function exportNotes(doc: PdfDocument) {
+		try {
+			const markdown = await exportDocumentNotesAsMarkdown(doc.id);
+			const url = URL.createObjectURL(
+				new Blob([markdown], { type: "text/markdown;charset=utf-8" }),
+			);
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = `${doc.name.replace(/\.pdf$/i, "")}.md`;
+			anchor.click();
+			URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error("Could not export these notes:", error);
+			setProblem("Those notes could not be exported.");
+		}
+	}
+
+	const isBusy = busyMessage !== null;
 
 	return (
-		<div className="min-h-screen bg-stone-100/70 text-stone-800 dark:bg-stone-950 dark:text-stone-100">
-			{/* Top Banner Header */}
-			<header className="border-b border-stone-200/80 bg-white/80 px-6 py-6 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/80 shadow-xs">
-				<div className="mx-auto flex max-w-6xl flex-col md:flex-row md:items-center md:justify-between gap-4">
-					<div>
-						<div className="flex items-center gap-3">
-							<div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-md shadow-emerald-500/20">
-								<BookOpen className="size-5" />
-							</div>
-							<div>
-								<h1 className="font-serif text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
-									Parallel PDF Reader
-								</h1>
-								<p className="text-xs text-stone-500 dark:text-stone-400">
-									Synchronized PDF reading & page-coupled Markdown note taking •
-									Local-first
-								</p>
-							</div>
+		<div className="min-h-dvh bg-desk text-ink">
+			<header className="border-b border-rule bg-surface">
+				<div className="mx-auto flex h-13 max-w-5xl items-center justify-between gap-4 px-6">
+					<span className="text-ui font-semibold tracking-[-0.01em]">
+						Parallel PDF Reader
+					</span>
+					<ThemeToggle />
+				</div>
+			</header>
+
+			<main className="mx-auto max-w-5xl px-6 pb-20 pt-12">
+				{/*
+				  The hero is the act the product exists for: put a PDF here and start
+				  writing next to it. Nothing else competes with the drop target.
+				*/}
+				<div className="max-w-xl">
+					<h1 className="font-serif text-[1.75rem] leading-[1.25] tracking-[-0.015em] text-ink">
+						Read a page. Write about that page.
+					</h1>
+					<p className="mt-3 max-w-md text-ui leading-relaxed text-ink-2">
+						Each PDF page gets its own note, side by side and locked together as
+						you scroll. Files and notes stay in this browser.
+					</p>
+				</div>
+
+				{/* biome-ignore lint/a11y/noStaticElementInteractions: a drop target has no ARIA role; the same action is reachable from the two buttons inside it. */}
+				<div
+					className={cn(
+						"mt-8 rounded-panel border border-dashed p-1 transition-colors",
+						isDragOver ? "border-quill bg-quill-soft" : "border-rule-strong",
+					)}
+					onDragOver={(event) => {
+						event.preventDefault();
+						setIsDragOver(true);
+					}}
+					onDragLeave={() => setIsDragOver(false)}
+					onDrop={(event) => {
+						event.preventDefault();
+						setIsDragOver(false);
+						const file = event.dataTransfer.files?.[0];
+						if (file) addDocument(file);
+					}}
+				>
+					<div className="flex flex-col items-center gap-4 rounded-[calc(var(--radius-panel)-2px)] bg-surface px-6 py-9 text-center">
+						<span className="flex size-10 items-center justify-center rounded-control bg-quill-soft text-quill">
+							<Upload className="size-4.5" />
+						</span>
+						<div>
+							<p className="text-ui font-medium text-ink" id={dropZoneId}>
+								Drop a PDF here
+							</p>
+							<p className="mt-1 text-tiny text-ink-2">
+								Nothing is uploaded. The file is stored in this browser only.
+							</p>
 						</div>
-					</div>
-
-					{/* Quick Action Buttons */}
-					<div className="flex flex-wrap items-center gap-3">
-						<button
-							type="button"
-							onClick={handleLoadDemoDoc}
-							disabled={isUploading}
-							className="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 hover:text-stone-900 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700 transition-all disabled:opacity-50"
-						>
-							<Sparkles className="size-4 text-emerald-600 dark:text-emerald-400" />
-							<span>Load Demo PDF</span>
-						</button>
-
-						<button
-							type="button"
-							onClick={() => fileInputRef.current?.click()}
-							disabled={isUploading}
-							className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
-						>
-							<Plus className="size-4" />
-							<span>Upload PDF</span>
-						</button>
-
+						<div className="flex flex-wrap items-center justify-center gap-2">
+							<Button
+								variant="primary"
+								onClick={() => fileInputRef.current?.click()}
+								disabled={isBusy}
+								aria-describedby={dropZoneId}
+							>
+								<Plus className="size-3.5" />
+								Choose a PDF
+							</Button>
+							<Button onClick={addDemoDocument} disabled={isBusy}>
+								<Sparkles className="size-3.5 text-marker-ink" />
+								Try the sample paper
+							</Button>
+						</div>
 						<input
-							type="file"
 							ref={fileInputRef}
+							type="file"
 							accept="application/pdf"
-							className="hidden"
-							onChange={(e) => {
-								const file = e.target.files?.[0];
-								if (file) handleProcessFile(file);
-								e.target.value = "";
+							className="sr-only"
+							onChange={(event) => {
+								const file = event.target.files?.[0];
+								if (file) addDocument(file);
+								event.target.value = "";
 							}}
 						/>
 					</div>
 				</div>
-			</header>
 
-			{/* Main Content Area */}
-			<main className="mx-auto max-w-6xl px-6 py-8">
-				{/* Upload Status Alert */}
-				{isUploading && (
-					<div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
-						<Loader2 className="size-5 animate-spin text-emerald-600" />
-						<span>{uploadStatus || "Processing..."}</span>
-					</div>
-				)}
-
-				{/* Drag & Drop Upload Hero Area */}
-				<button
-					type="button"
-					onDragOver={(e) => {
-						e.preventDefault();
-						setIsDragOver(true);
-					}}
-					onDragLeave={() => setIsDragOver(false)}
-					onDrop={(e) => {
-						e.preventDefault();
-						setIsDragOver(false);
-						const file = e.dataTransfer.files?.[0];
-						if (file) handleProcessFile(file);
-					}}
-					onClick={() => fileInputRef.current?.click()}
-					className={`group mb-10 w-full cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
-						isDragOver
-							? "border-emerald-500 bg-emerald-50/50 dark:border-emerald-400 dark:bg-emerald-950/30"
-							: "border-stone-300/80 bg-white/60 hover:border-emerald-400 hover:bg-emerald-50/20 dark:border-stone-800 dark:bg-stone-900/40 dark:hover:border-emerald-500"
-					}`}
-				>
-					<div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-stone-100 group-hover:bg-emerald-100/70 dark:bg-stone-800 dark:group-hover:bg-emerald-950/80 transition-colors">
-						<FileUp className="size-6 text-stone-500 group-hover:text-emerald-700 dark:text-stone-400 dark:group-hover:text-emerald-300" />
-					</div>
-					<h3 className="mt-3 text-sm font-semibold text-stone-800 dark:text-stone-200">
-						Drop your PDF file here, or browse
-					</h3>
-					<p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
-						PDFs are stored locally in your browser with Dexie.js (IndexedDB).
-						No cloud upload required.
-					</p>
-				</button>
-
-				{/* Document Grid Header */}
-				<div className="mb-4 flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<h2 className="text-base font-bold text-stone-800 dark:text-stone-200">
-							Your Documents
-						</h2>
-						<span className="rounded-full bg-stone-200/70 px-2 py-0.5 text-xs font-semibold text-stone-700 dark:bg-stone-800 dark:text-stone-300">
-							{documents.length}
-						</span>
-					</div>
-
-					<div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
-						<HardDrive className="size-3.5 text-emerald-600" />
-						<span>Local-first storage</span>
-					</div>
-				</div>
-
-				{/* Documents Grid / Empty State */}
-				{isLoading ? (
-					<div className="flex flex-col items-center justify-center py-16">
-						<Loader2 className="size-8 animate-spin text-emerald-600" />
-						<span className="mt-3 text-xs text-stone-500">
-							Loading documents...
-						</span>
-					</div>
-				) : documents.length === 0 ? (
-					<div className="rounded-2xl border border-stone-200 bg-white/70 p-12 text-center dark:border-stone-800 dark:bg-stone-900/60">
-						<div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-stone-100 dark:bg-stone-800">
-							<FileText className="size-8 text-stone-400" />
-						</div>
-						<h3 className="mt-4 text-base font-bold text-stone-800 dark:text-stone-200">
-							No PDFs in your library yet
-						</h3>
-						<p className="mx-auto mt-1 max-w-md text-xs text-stone-500 dark:text-stone-400">
-							Upload any PDF paper, article, or textbook to begin taking
-							side-by-side synchronized notes, or load the demo document.
+				<div aria-live="polite" className="mt-4 empty:mt-0">
+					{busyMessage && (
+						<p className="flex items-center gap-2 rounded-control border border-rule bg-surface px-3 py-2 text-tiny text-ink-2">
+							<Loader2 className="size-3.5 animate-spin text-quill" />
+							{busyMessage}
 						</p>
-						<div className="mt-6 flex justify-center gap-3">
+					)}
+					{problem && (
+						<p className="flex items-start justify-between gap-3 rounded-control border border-danger/35 bg-danger-soft px-3 py-2 text-tiny text-danger">
+							<span>{problem}</span>
 							<button
 								type="button"
-								onClick={handleLoadDemoDoc}
-								className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-emerald-500"
+								onClick={() => setProblem(null)}
+								className="shrink-0 font-medium underline underline-offset-2"
 							>
-								<Sparkles className="size-4" />
-								<span>Load Demo Document</span>
+								Dismiss
 							</button>
-						</div>
+						</p>
+					)}
+				</div>
+
+				<section className="mt-14">
+					<div className="flex items-baseline justify-between border-b border-rule pb-3">
+						<h2 className="text-ui font-semibold text-ink">Your documents</h2>
+						{documents.length > 0 && (
+							<span className="text-micro tabular-nums text-ink-3">
+								{documents.length}
+							</span>
+						)}
 					</div>
-				) : (
-					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-						{documents.map((doc) => {
-							const notesCount = notesCountMap[doc.id] || 0;
 
-							return (
-								<div
-									key={doc.id}
-									className="group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-emerald-500/50 hover:shadow-md dark:border-stone-800 dark:bg-stone-900"
-								>
-									{/* Thumbnail / Preview Area */}
-									<button
-										type="button"
-										onClick={() => onSelectDocument(doc.id)}
-										className="relative flex h-48 w-full cursor-pointer items-center justify-center overflow-hidden bg-stone-100 dark:bg-stone-950/80 border-b border-stone-100 dark:border-stone-800/80"
+					{isLoading ? (
+						<p className="flex items-center gap-2 py-10 text-tiny text-ink-3">
+							<Loader2 className="size-3.5 animate-spin" />
+							Opening the local library
+						</p>
+					) : documents.length === 0 ? (
+						<p className="py-10 text-ui text-ink-2">
+							Nothing here yet. Add a PDF above and it will appear in this list.
+						</p>
+					) : (
+						/*
+						  A list, not a card grid: the useful comparison between documents is
+						  how far along each one is, and a list puts those numbers in a column
+						  you can read down.
+						*/
+						<ul className="divide-y divide-rule">
+							{documents.map((doc) => {
+								const notes = noteCounts[doc.id] ?? 0;
+								const progress =
+									doc.pageCount > 0
+										? Math.round((notes / doc.pageCount) * 100)
+										: 0;
+								const isConfirming = pendingDelete === doc.id;
+
+								return (
+									<li
+										key={doc.id}
+										className="group flex items-center gap-4 py-3.5"
 									>
-										{doc.thumbnailDataUrl ? (
-											<img
-												src={doc.thumbnailDataUrl}
-												alt={`Preview of ${doc.name}`}
-												className="h-full w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-											/>
-										) : (
-											<div className="flex flex-col items-center justify-center text-stone-400">
-												<FileText className="size-12" />
-												<span className="mt-2 text-xs">PDF Document</span>
-											</div>
-										)}
-
-										{/* Page count pill */}
-										<div className="absolute top-3 left-3 rounded-lg bg-stone-900/70 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm shadow-xs">
-											{doc.pageCount} {doc.pageCount === 1 ? "page" : "pages"}
-										</div>
-
-										{/* Notes count badge */}
-										{notesCount > 0 && (
-											<div className="absolute top-3 right-3 flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white shadow-xs">
-												<FileCheck className="size-3" />
-												<span>{notesCount} notes</span>
-											</div>
-										)}
-									</button>
-
-									{/* Document Info Body */}
-									<div className="flex flex-1 flex-col p-4">
 										<button
 											type="button"
 											onClick={() => onSelectDocument(doc.id)}
-											title={doc.name}
-											className="cursor-pointer truncate text-left text-sm font-bold text-stone-800 group-hover:text-emerald-700 dark:text-stone-200 dark:group-hover:text-emerald-400 transition-colors"
+											className="flex min-w-0 flex-1 items-center gap-4 text-left"
 										>
-											{doc.name}
+											<span className="sheet flex h-14 w-[2.75rem] shrink-0 items-center justify-center overflow-hidden">
+												{doc.thumbnailDataUrl ? (
+													<img
+														src={doc.thumbnailDataUrl}
+														alt=""
+														className="size-full object-cover object-top"
+													/>
+												) : (
+													<FileText className="size-4 text-ink-3" />
+												)}
+											</span>
+
+											<span className="min-w-0 flex-1">
+												<span className="block truncate text-ui font-medium text-ink group-hover:text-quill">
+													{doc.name}
+												</span>
+												<span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-micro text-ink-3">
+													<span className="tabular-nums">
+														{doc.pageCount}{" "}
+														{doc.pageCount === 1 ? "page" : "pages"}
+													</span>
+													<span className="tabular-nums">
+														{formatSize(doc.size)}
+													</span>
+													<span>Opened {formatDate(doc.updatedAt)}</span>
+												</span>
+											</span>
+
+											<span className="hidden w-32 shrink-0 sm:block">
+												{notes > 0 ? (
+													<>
+														<span className="block text-micro tabular-nums text-marker-ink">
+															{notes} of {doc.pageCount} annotated
+														</span>
+														<span className="mt-1 block h-1 overflow-hidden rounded-full bg-surface-3">
+															<span
+																className="block h-full rounded-full bg-marker"
+																style={{ width: `${progress}%` }}
+															/>
+														</span>
+													</>
+												) : (
+													<span className="block text-micro text-ink-3">
+														No notes yet
+													</span>
+												)}
+											</span>
 										</button>
 
-										<div className="mt-2 flex items-center gap-3 text-[11px] text-stone-600 dark:text-stone-300">
-											<span>{formatFileSize(doc.size)}</span>
-											<span>•</span>
-											<span>
-												{new Date(doc.updatedAt).toLocaleDateString()}
+										{isConfirming ? (
+											<span className="flex shrink-0 items-center gap-1.5 text-micro text-ink-2">
+												Delete this and its notes?
+												<Button
+													size="sm"
+													variant="ghost"
+													onClick={() => removeDocument(doc.id)}
+													className="text-danger hover:bg-danger-soft hover:text-danger"
+												>
+													Delete
+												</Button>
+												<Button
+													size="sm"
+													variant="ghost"
+													onClick={() => setPendingDelete(null)}
+												>
+													Keep
+												</Button>
 											</span>
-										</div>
-
-										{/* Action Buttons */}
-										<div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 dark:border-stone-800">
-											<button
-												type="button"
-												onClick={() => onSelectDocument(doc.id)}
-												className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-900/60 transition-colors"
-											>
-												<BookOpen className="size-3.5" />
-												<span>Open</span>
-											</button>
-
-											<div className="flex items-center gap-1">
-												<button
-													type="button"
-													onClick={() => handleExport(doc.id, doc.name)}
-													title="Export notes as Markdown"
-													className="rounded-lg p-1.5 text-stone-600 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-stone-100"
+										) : (
+											<span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+												<Button
+													size="icon"
+													variant="ghost"
+													onClick={() => exportNotes(doc)}
+													title="Download the notes as markdown"
+													aria-label={`Download the notes for ${doc.name}`}
 												>
-													<Download className="size-4" />
-												</button>
-
-												<button
-													type="button"
-													onClick={() => handleDelete(doc.id, doc.name)}
-													title="Delete document"
-													className="rounded-lg p-1.5 text-stone-600 hover:bg-red-50 hover:text-red-700 dark:text-stone-300 dark:hover:bg-red-950/60 dark:hover:text-red-300"
+													<Download className="size-3.5" />
+												</Button>
+												<Button
+													size="icon"
+													variant="danger"
+													onClick={() => setPendingDelete(doc.id)}
+													title="Delete this document"
+													aria-label={`Delete ${doc.name}`}
 												>
-													<Trash2 className="size-4" />
-												</button>
-											</div>
-										</div>
-									</div>
-								</div>
-							);
-						})}
-					</div>
-				)}
+													<Trash2 className="size-3.5" />
+												</Button>
+											</span>
+										)}
+									</li>
+								);
+							})}
+						</ul>
+					)}
+				</section>
 			</main>
 		</div>
 	);

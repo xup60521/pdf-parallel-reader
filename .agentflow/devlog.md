@@ -126,4 +126,44 @@ Problems encountered and resolved:
 
 # → Ask / A-002
 
-+
++ godev
+The UI is TERRIBLE. Use your best effort to fix it, both the layout and the theme. You shall use frontend-design skill to ensure quality.
+Plus, Go check out D:\code\side_project\contextboard\packages\editor to have a general idea of what markdown editor should you build. 
+Go freely in this round. continue until you think all you can do are done. I'm going to sleep. Don't stop and ask me question.
+
+## [RUN-001] Event (during round A-002)
+
+- Route: direct. Owner authorized a free, unattended round with no blocking questions.
+- Read the whole application surface: `styles.css`, `routes/__root.tsx`, `routes/index.tsx`, `DocumentOverview`, `ParallelReaderView`, `MarkdownNoteEditor`, `EditorBubbleToolbar`, `PdfPageView`, `editor.css`, `markdown-converter.ts`, `lib/db.ts`.
+- Read the reference editor at `D:/code/side_project/contextboard/packages/editor`: `createRichTextExtensions.ts`, `slash/{slash-command.ts,renderer.ts,items.tsx,SlashCommandList.tsx}`, `EditorBubbleMenu.tsx`, `MarkdownPasteExtension.ts`, `editor.css`.
+- Reproduced defects by exact file inspection, not assumption:
+  - `styles.css` defines two conflicting token systems; `@layer base { body { background-color: var(--background) } }` overrides the gradient body background, so the authored theme never renders.
+  - Components hardcode `stone-*`/`emerald-*` and reference neither token system, giving three colliding visual languages.
+  - `PdfPageView` sizes its frame from `viewport.width` at the raw scale, so the page never fits its column: it under-fills at scale 1 and overflows horizontally past scale ~1.4.
+  - Sticky offsets are hand-tuned constants (`top-0`, `top-[49px]`, `top-20`) against content-derived header heights.
+  - The "Jump to" navigator mounts one button per page inside a 260px scroller.
+  - `ParallelReaderView` mounts a `PdfPageView` and a full TipTap instance for every page at once.
+  - `MarkdownNoteEditor.onHeightChange` is never passed by the parent (dead prop).
+  - `EditorBubbleToolbar` positions itself with fixed pixel offsets and no flip/shift, so it clips at container edges.
+  - `.dark` tokens exist but nothing ever sets the class.
+- Installed the editor dependencies this rebuild needs: `@tiptap/suggestion`, `@tiptap/extension-table`, `@tiptap/extension-highlight`, `@tiptap/extension-mathematics`, `@floating-ui/dom`, `katex`.
+- Next: freeze the design plan, then rebuild the token layer, the reader layout, and the editor.
+
+## [RUN-002] Event (during round A-002)
+
+- Froze the design at `.agentflow/artifacts/A-002-ui-overhaul/design.md`: ink/paper/desk palette, Instrument Sans for chrome with Literata for note prose, and the spine as the single bold element. Recorded three plan revisions away from generic defaults and four rejected smaller alternatives.
+- Rebuilt the token layer in `src/styles.css` as one palette; the shadcn aliases now derive from it instead of forming a second system. Removed the dead `@layer base` body override and the decorative gradient/overlay layers.
+- Added `lib/theme.ts` plus `ui/ThemeToggle.tsx` and an inline head bootstrap in `__root.tsx`; verified against the served HTML that the script precedes `<body>`, so no flash.
+- Rebuilt the editor from the reference package's shape: `extensions.ts` factory, `@tiptap/suggestion` + `@floating-ui/dom` slash menu with flip/shift, TipTap's own `BubbleMenu`, and highlight/tasks/tables/KaTeX. Deleted `MarkdownNoteEditor.tsx`, `EditorBubbleToolbar.tsx`, and `markdown-converter.ts`.
+- Rebuilt `ParallelReaderView` as one scroll pane with a thumbnail rail, the spine, fit-to-width pages, and windowed rows; rebuilt `DocumentOverview` as a progress-bearing list and replaced `alert`/`confirm` with in-UI states.
+- Defects found and fixed during the real browser journey, each reproduced before the fix:
+  - `rootMargin` only grows the observer root, so rows inside the `overflow-y-auto` pane were clipped and the prefetch window never took effect. `useInViewport` now takes the pane as `root`; the rail passes its own list.
+  - `getHTML()` renders math as an empty `<span data-latex>`, and Turndown replaces blank elements before custom rules run, so every equation was silently dropped on save. `htmlToMarkdown` now makes math non-blank before serializing.
+  - Zoom above 100% was being absorbed by flex shrink instead of overflowing, and the sticky page had no travel because the row used `items-start`. The column now stretches and the overflow lives on the sticky element itself.
+  - React dedupes `theme-color` by name, so the light variant never rendered. One tag now, updated by `applyTheme` and the bootstrap.
+- Verified in the browser at 1683x1052 against the demo document: page fits its column exactly (717px sheet in a 733px column, zero document overflow); prose measure capped at 591px; text layer renders 104 selectable spans; slash menu lists 14 items across 5 groups; bubble menu exposes 9 controls; dark mode resolves and persists; rail click drives spine, page field, and rail highlight together.
+- Sticky pin verified for the first time: with a 2258px note against a 1015px page, the page holds at a constant viewport top through a 900px scroll.
+- Round-trip verified byte-exact through the editor for inline math, block math, checked and unchecked tasks, a GFM table, a highlight, and inline code.
+- Added a stacked layout below 760px of content width with the spine turned on its side and the rail auto-collapsing; verified the row switches to `flex-col` with no overflow.
+- Removed five tokens and one CSS import that nothing referenced.
+- `bunx tsc --noEmit`, `bun run check`, and `bun run build` all pass.

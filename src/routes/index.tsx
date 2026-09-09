@@ -4,6 +4,7 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useEffect, useState } from "react";
 import { DocumentOverview } from "../components/overview/DocumentOverview";
 import { ParallelReaderView } from "../components/reader/ParallelReaderView";
+import { Button } from "../components/ui/Button";
 import {
 	getDocumentById,
 	getNotesForPdf,
@@ -61,7 +62,7 @@ function AppIndexPage() {
 				const doc = await getDocumentById(currentDocId);
 				if (!doc) {
 					if (!isCancelled) {
-						setLoadError("Document not found in local storage.");
+						setLoadError("That document is not in this browser");
 						setIsLoadingReader(false);
 					}
 					return;
@@ -77,9 +78,9 @@ function AppIndexPage() {
 					setIsLoadingReader(false);
 				}
 			} catch (err: unknown) {
-				console.error("Failed to load reader:", err);
+				console.error("Could not open the reader:", err);
 				if (!isCancelled) {
-					setLoadError("Failed to load the PDF document. Please try again.");
+					setLoadError("That PDF could not be opened");
 					setIsLoadingReader(false);
 				}
 			}
@@ -94,8 +95,8 @@ function AppIndexPage() {
 
 	if (!isClient) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-stone-50 dark:bg-stone-950">
-				<Loader2 className="size-8 animate-spin text-emerald-600" />
+			<div className="grid min-h-dvh place-content-center bg-desk">
+				<Loader2 className="size-5 animate-spin text-ink-3" />
 			</div>
 		);
 	}
@@ -104,32 +105,32 @@ function AppIndexPage() {
 	if (selectedDocId) {
 		if (isLoadingReader) {
 			return (
-				<div className="flex min-h-screen flex-col items-center justify-center bg-stone-50 dark:bg-stone-950">
-					<Loader2 className="size-10 animate-spin text-emerald-600 dark:text-emerald-400" />
-					<p className="mt-4 text-sm font-medium text-stone-600 dark:text-stone-400">
-						Opening PDF & loading notes...
-					</p>
+				<div className="grid min-h-dvh place-content-center justify-items-center gap-3 bg-desk">
+					<Loader2 className="size-5 animate-spin text-quill" />
+					<p className="text-ui text-ink-2">Opening the document</p>
 				</div>
 			);
 		}
 
 		if (loadError || !activeDocMeta || !activePdfDoc) {
 			return (
-				<div className="flex min-h-screen flex-col items-center justify-center bg-stone-50 p-6 dark:bg-stone-950">
-					<div className="rounded-2xl border border-stone-200 bg-white p-8 text-center dark:border-stone-800 dark:bg-stone-900 shadow-md max-w-md">
-						<h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">
-							{loadError || "Error loading document"}
-						</h3>
-						<p className="mt-2 text-sm text-stone-500">
-							The requested PDF document could not be retrieved from IndexedDB.
+				<div className="grid min-h-dvh place-content-center bg-desk p-6">
+					<div className="max-w-sm rounded-panel border border-rule bg-surface p-6">
+						<h1 className="text-ui font-semibold text-ink">
+							{loadError ?? "That document is not in this browser"}
+						</h1>
+						<p className="mt-2 text-tiny leading-relaxed text-ink-2">
+							Documents live only in the browser that added them, so a link
+							opened elsewhere, or storage that has since been cleared, will not
+							resolve. Add the PDF again from the library.
 						</p>
-						<button
-							type="button"
-							onClick={() => navigate({ search: {} })}
-							className="mt-6 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500"
+						<Button
+							variant="primary"
+							className="mt-5"
+							onClick={() => navigate({ to: "/", search: {} })}
 						>
-							Back to Overview
-						</button>
+							Back to the library
+						</Button>
 					</div>
 				</div>
 			);
@@ -140,7 +141,7 @@ function AppIndexPage() {
 				pdfDoc={activePdfDoc}
 				docMeta={activeDocMeta}
 				initialNotes={activeNotes}
-				onBack={() => navigate({ search: {} })}
+				onBack={() => navigate({ to: "/", search: {} })}
 			/>
 		);
 	}
@@ -148,7 +149,7 @@ function AppIndexPage() {
 	// Document library overview view
 	return (
 		<DocumentOverview
-			onSelectDocument={(id) => navigate({ search: { doc: id } })}
+			onSelectDocument={(id) => navigate({ to: "/", search: { doc: id } })}
 		/>
 	);
 }
