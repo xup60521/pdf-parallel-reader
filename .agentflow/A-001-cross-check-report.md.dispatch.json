@@ -1,0 +1,26 @@
+{
+  "dispatch": {
+    "stage": "cross-check-A-001",
+    "profile": "claude-default",
+    "family": "claude",
+    "tier": "better",
+    "model": "claude-opus-4-6",
+    "effort": "high",
+    "marker": "A-001-cross-check-3",
+    "worker_args": []
+  },
+  "status": "completed",
+  "exit_code": 0,
+  "timed_out": false,
+  "clone": {
+    "independent": true,
+    "remotes": [],
+    "changed": false
+  },
+  "stdout_bytes": 3583,
+  "stdout_truncated": false,
+  "stderr_excerpt": "",
+  "report_bytes": 3542,
+  "preamble_trimmed_bytes": 41,
+  "report_path": ".agentflow\\A-001-cross-check-report.md"
+}
