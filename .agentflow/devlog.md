@@ -4,7 +4,7 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: 6ce7e9b55101dd7ab46ec0895fed106e20a4f7d1 — agentflow initialization.
+Current commit: 0aa8ea7 — implementation 6ce7e9b55101dd7ab46ec0895fed106e20a4f7d1 plus closeout records.
 
 Tests/scenarios: `bun run check` passed; targeted cross-check PASS; host gate PASS.
 
