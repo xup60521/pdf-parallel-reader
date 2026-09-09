@@ -1,0 +1,14 @@
+{
+  "changed_files": [
+    ".agentflow/devlog.md",
+    ".gitignore",
+    "ag.json",
+    ".agentflow/cross-check-facts.json"
+  ],
+  "changed_lines": 119,
+  "behavior_change": false,
+  "trust_boundary": false,
+  "broad_change": false,
+  "consequential_change": false,
+  "owner_control": "default"
+}
