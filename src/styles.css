@@ -46,6 +46,12 @@
   --highlight-bg: rgb(214 164 74 / 0.38);
   --highlight-ink: #4a3a05;
 
+  /* Scrollbars are load-bearing here — the page scrolls and a zoomed page
+     scrolls sideways — so the thumb is a real object, not a whisper. */
+  --scroll-thumb: rgb(55 53 47 / 0.34);
+  --scroll-thumb-hover: rgb(55 53 47 / 0.55);
+  --scroll-track: rgb(55 53 47 / 0.06);
+
   --danger: #a3352c;
   --danger-soft: rgb(163 53 44 / 0.09);
 
@@ -87,6 +93,10 @@
 
   --highlight-bg: rgb(214 164 74 / 0.28);
   --highlight-ink: #f6e6bd;
+
+  --scroll-thumb: rgb(255 251 240 / 0.28);
+  --scroll-thumb-hover: rgb(255 251 240 / 0.48);
+  --scroll-track: rgb(255 251 240 / 0.06);
 
   --danger: #e58a80;
   --danger-soft: rgb(229 138 128 / 0.12);
@@ -144,6 +154,15 @@ body,
   min-height: 100%;
 }
 
+/*
+  Reserve the scrollbar from the first layout. Without this the reading area is
+  measured once at the full window width, the scrollbar then appears, and the
+  page is left a few pixels wider than the column it is supposed to fill.
+*/
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   background-color: var(--paper);
@@ -173,26 +192,65 @@ body {
     color: var(--ink);
   }
 
+  html {
+    scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+  }
+
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 13px;
+    height: 13px;
   }
 
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--scroll-track);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: var(--rule-strong);
+    background: var(--scroll-thumb);
     border: 3px solid transparent;
     background-clip: content-box;
     border-radius: 999px;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--ink-faint);
+  ::-webkit-scrollbar-thumb:hover,
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--scroll-thumb-hover);
     background-clip: content-box;
   }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/*
+  The horizontal scroller under a zoomed page. It is the only way to reach the
+  rest of a page wider than its column, so it is drawn heavier than the page
+  scrollbar and always present rather than overlaid.
+*/
+.pdf-scroll {
+  scrollbar-color: var(--scroll-thumb-hover) var(--scroll-track);
+}
+
+.pdf-scroll::-webkit-scrollbar {
+  height: 15px;
+}
+
+.pdf-scroll::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-radius: 999px;
+}
+
+.pdf-scroll::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb-hover);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+
+.pdf-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-2);
+  background-clip: content-box;
 }
 
 /*

@@ -32,8 +32,39 @@ const FIT_INDEX = ZOOM_STEPS.indexOf(1);
 const PDF_PADDING = 0;
 const ROW_TOP = 36;
 const NOTE_PADDING = 40;
-/** The design caps the note at 560px so a wide window cannot stretch the measure. */
-const NOTE_MEASURE = 560;
+/** How much of the reading area the page column may take, as a fraction. */
+const MIN_SPLIT = 0.2;
+const MAX_SPLIT = 0.8;
+const DEFAULT_SPLIT = 0.5;
+/** One arrow key press on the divider, as a fraction of the reading area. */
+const SPLIT_STEP = 0.02;
+
+/**
+ * A click in the note column that lands on nothing — the padding, the space
+ * under a short note — puts the caret at the end of that note. The panel is a
+ * page of writing, so all of it should behave like one.
+ */
+function focusNoteFromDeadSpace(event: React.MouseEvent<HTMLElement>) {
+	// Anything that already handles a click — the editor, the raw textarea, the
+	// label's own controls — keeps it.
+	if (
+		(event.target as HTMLElement).closest(
+			".note-prose, textarea, button, input, a, .plabel",
+		)
+	)
+		return;
+	const prose = event.currentTarget.querySelector<HTMLElement>(".note-prose");
+	if (!prose) return;
+	event.preventDefault();
+	prose.focus();
+	const selection = window.getSelection();
+	if (!selection) return;
+	const range = document.createRange();
+	range.selectNodeContents(prose);
+	range.collapse(false);
+	selection.removeAllRanges();
+	selection.addRange(range);
+}
 
 const DEFAULT_ASPECT = 842 / 595;
 /** How far outside the viewport a row still renders, in CSS pixels. */
@@ -169,7 +200,12 @@ function PageRow({
 			ref={rowRef}
 			data-page={pageNumber}
 			aria-label={`Page ${pageNumber}`}
-			className="grid grid-cols-2 items-start"
+			// The split is a variable on the scroll container, so every row moves
+			// together when the divider is dragged.
+			// `minmax(0,1fr)` as the design writes it: without the 0 minimum the
+			// note track cannot shrink below its content, and one wide table or
+			// code line would push the whole document sideways.
+			className="grid items-start [grid-template-columns:var(--split)_minmax(0,1fr)]"
 		>
 			{/*
 			  The page pins while a longer note scrolls past it. Horizontal overflow
@@ -184,22 +220,27 @@ function PageRow({
 					paddingBottom: isLast ? ROW_TOP : 18,
 				}}
 			>
-				<div className="sticky top-0 overflow-x-auto">
-					<div className="flex w-max min-w-full">{pageNode}</div>
+				<div className="pdf-scroll sticky top-0 overflow-x-auto">
+					{/* Centred, so a page smaller than its column sits in the middle
+					    of the band rather than against the rail. */}
+					<div className="flex w-max min-w-full justify-center">{pageNode}</div>
 				</div>
 			</div>
 
+			{/* The whole cell is the note: clicking anywhere in it puts the caret in
+			    the editor, so the note is as big a target as it looks. */}
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: this only forwards a click in dead space to the editor the cell already contains; the editor itself carries the textbox role. */}
 			<div
+				onMouseDown={focusNoteFromDeadSpace}
+				className="min-w-0"
 				style={{
 					paddingInline: NOTE_PADDING,
 					paddingTop: isFirst ? ROW_TOP : 0,
 					paddingBottom: isLast ? ROW_TOP : 18,
 				}}
 			>
-				<div style={{ maxWidth: NOTE_MEASURE }}>
-					{headerSlot}
-					{noteNode}
-				</div>
+				{headerSlot}
+				{noteNode}
 			</div>
 		</section>
 	);
@@ -212,6 +253,8 @@ export function ParallelReaderView({
 	onBack,
 }: ParallelReaderViewProps) {
 	const [zoomIndex, setZoomIndex] = useState(FIT_INDEX);
+	const [split, setSplit] = useState(DEFAULT_SPLIT);
+	const [isDragging, setIsDragging] = useState(false);
 	const [availableWidth, setAvailableWidth] = useState(0);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [aspectRatio, setAspectRatio] = useState(DEFAULT_ASPECT);
@@ -279,7 +322,7 @@ export function ParallelReaderView({
 	// column minus its 36px padding; zoom above 100% overflows that cell only.
 	// Fractional on purpose: an odd content width splits into two half-pixel
 	// columns, and rounding the page down leaves a sliver of gutter beside it.
-	const pdfCellWidth = isStacked ? availableWidth : availableWidth / 2;
+	const pdfCellWidth = isStacked ? availableWidth : availableWidth * split;
 	const renderWidth = Math.max((pdfCellWidth - PDF_PADDING * 2) * zoom, 160);
 	const reservedHeight = renderWidth * aspectRatio;
 
@@ -432,6 +475,57 @@ export function ParallelReaderView({
 		}
 	}
 
+	/* ---- The divider: the split is dragged, not derived from zoom ---- */
+
+	const applySplitFromClientX = useCallback((clientX: number) => {
+		const content = contentRef.current;
+		if (!content) return;
+		const rect = content.getBoundingClientRect();
+		if (rect.width <= 0) return;
+		const fraction = (clientX - rect.left) / rect.width;
+		setSplit(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, fraction)));
+	}, []);
+
+	// Bound to the window rather than the handle: a pointer that outruns a 9px
+	// strip must keep dragging it, and releasing outside the window must still
+	// end the drag.
+	useEffect(() => {
+		if (!isDragging) return;
+		const onMove = (event: PointerEvent) => {
+			event.preventDefault();
+			applySplitFromClientX(event.clientX);
+		};
+		const onUp = () => setIsDragging(false);
+		window.addEventListener("pointermove", onMove);
+		window.addEventListener("pointerup", onUp);
+		window.addEventListener("pointercancel", onUp);
+		return () => {
+			window.removeEventListener("pointermove", onMove);
+			window.removeEventListener("pointerup", onUp);
+			window.removeEventListener("pointercancel", onUp);
+		};
+	}, [isDragging, applySplitFromClientX]);
+
+	function onDividerKeyDown(event: React.KeyboardEvent) {
+		const delta =
+			event.key === "ArrowLeft"
+				? -SPLIT_STEP
+				: event.key === "ArrowRight"
+					? SPLIT_STEP
+					: 0;
+		if (delta === 0) {
+			if (event.key === "Home" || event.key === "End") {
+				event.preventDefault();
+				setSplit(event.key === "Home" ? MIN_SPLIT : MAX_SPLIT);
+			}
+			return;
+		}
+		event.preventDefault();
+		setSplit((current) =>
+			Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, current + delta)),
+		);
+	}
+
 	/*
 	  The design has no title anywhere, but renaming is a working feature and a
 	  document name does not fit in a 64px rail. It takes the `.plabel` voice at
@@ -504,7 +598,45 @@ export function ParallelReaderView({
 				)}
 			</div>
 
-			<div ref={contentRef} className="min-w-0 flex-1">
+			<div
+				ref={contentRef}
+				className={cn(
+					"relative min-w-0 flex-1",
+					isDragging && "cursor-col-resize select-none",
+				)}
+				style={{ "--split": `${split * 100}%` } as React.CSSProperties}
+			>
+				{!isStacked && (
+					// biome-ignore lint/a11y/useSemanticElements: an <hr> cannot be focused or dragged; this separator is an interactive control.
+					<div
+						role="separator"
+						aria-orientation="vertical"
+						aria-label="Resize the page and note columns"
+						aria-valuemin={Math.round(MIN_SPLIT * 100)}
+						aria-valuemax={Math.round(MAX_SPLIT * 100)}
+						aria-valuenow={Math.round(split * 100)}
+						tabIndex={0}
+						onKeyDown={onDividerKeyDown}
+						onPointerDown={(event) => {
+							event.preventDefault();
+							setIsDragging(true);
+						}}
+						onDoubleClick={() => setSplit(DEFAULT_SPLIT)}
+						title="Drag to resize · double-click to reset"
+						className={cn(
+							"group absolute inset-y-0 z-20 -ml-[6px] w-3 cursor-col-resize",
+							"left-[var(--split)]",
+						)}
+					>
+						<span
+							aria-hidden
+							className={cn(
+								"pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 transition-colors",
+								isDragging ? "bg-ink-2" : "bg-rule-strong group-hover:bg-ink-2",
+							)}
+						/>
+					</div>
+				)}
 				{pages.map((pageNumber) => (
 					<PageRow
 						key={pageNumber}
