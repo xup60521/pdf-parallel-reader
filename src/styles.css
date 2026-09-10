@@ -1,4 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
+/* The reading voice, used on the library screen only: Spectral is cut for
+   screen reading, which is what this product is for. Figtree stays the
+   interface voice, so the split is legible — serif is read, sans is operated. */
+@import url('https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;500&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
@@ -106,6 +110,7 @@
 
 @theme inline {
   --font-sans: 'Figtree', system-ui, sans-serif;
+  --font-serif: 'Spectral', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
   --color-paper: var(--paper);
@@ -144,6 +149,13 @@
   --text-ui--line-height: 1.25rem;
   --text-note: 0.9375rem; /* 15px — note prose */
   --text-note--line-height: 1.75;
+
+  /* Two sizes the reader never needs, added for the library screen: the opening
+     line of the page, and the name of a document. Both are set in the serif. */
+  --text-lede: 1.0625rem; /* 17px */
+  --text-lede--line-height: 1.6;
+  --text-display: clamp(2.125rem, 1.3rem + 2.75vw, 2.75rem); /* 34px — 44px */
+  --text-display--line-height: 1.1;
 }
 
 /* The page itself scrolls and the rail sticks to it, as the design specifies —
