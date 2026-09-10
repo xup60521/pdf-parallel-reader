@@ -8,7 +8,7 @@ Current commit: 298c743 — CommonJS marker for the bundled Agentflow scripts, p
 
 Tests/scenarios: `bun run check` clean over 30 files; `bunx tsc --noEmit` exit 0. Targeted cross-check PASS on Outcome, Minimality, Conformance, and aggregate Verdict for 298c743; host gate PASS.
 
-Configuration: ag.json — schema v7; unchanged this round.
+Configuration: ag.json — schema v7; validated for claude this round.
 
 Proven: A-002 results stand — one token layer at WCAG AA in both skins, pages fit their column at any zoom, sticky page pin, byte-exact Markdown round-trip, row windowing, flash-free dark mode. New: the Agentflow scripts run under plain `node` in this ESM project.
 
