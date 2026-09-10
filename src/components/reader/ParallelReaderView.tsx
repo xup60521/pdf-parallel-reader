@@ -92,6 +92,8 @@ interface PageRowProps {
 	isStacked: boolean;
 	isFirst: boolean;
 	isLast: boolean;
+	/** Shared sideways offset in px, or null while the page fits its column. */
+	panX: number | null;
 	headerSlot?: ReactNode;
 	onAspectRatio: (pageNumber: number, ratio: number) => void;
 	onNoteContentChange: (pageNumber: number, hasContent: boolean) => void;
@@ -120,6 +122,7 @@ function PageRow({
 	isStacked,
 	isFirst,
 	isLast,
+	panX,
 	headerSlot,
 	onAspectRatio,
 	onNoteContentChange,
@@ -208,22 +211,33 @@ function PageRow({
 			className="grid items-start [grid-template-columns:var(--split)_minmax(0,1fr)]"
 		>
 			{/*
-			  The page pins while a longer note scrolls past it. Horizontal overflow
-			  from zoom lives on the sticky element itself, because a scroll
-			  container around a sticky child would cancel the pin.
+			  The page pins while a longer note scrolls past it.
+
+			  `overflow-x: clip` rather than `hidden`: hidden would make this a
+			  scroll container on both axes and the pin would stick to the cell
+			  instead of the window. Sideways movement is a shared offset applied
+			  as a margin, driven by the one scrollbar at the foot of the column,
+			  so every page pans together and the control is always reachable.
 			*/}
 			<div
-				className="h-full bg-gutter"
+				className="h-full overflow-x-clip bg-gutter"
 				style={{
 					paddingInline: PDF_PADDING,
 					paddingTop: isFirst ? ROW_TOP : 0,
 					paddingBottom: isLast ? ROW_TOP : 18,
 				}}
 			>
-				<div className="pdf-scroll sticky top-0 overflow-x-auto">
-					{/* Centred, so a page smaller than its column sits in the middle
-					    of the band rather than against the rail. */}
-					<div className="flex w-max min-w-full justify-center">{pageNode}</div>
+				<div className="sticky top-0">
+					{/* Centred while the page fits its column; panned once it does not. */}
+					<div
+						className={cn(
+							"flex w-max min-w-full",
+							panX === null && "justify-center",
+						)}
+						style={panX === null ? undefined : { marginLeft: -panX }}
+					>
+						{pageNode}
+					</div>
 				</div>
 			</div>
 
@@ -253,6 +267,14 @@ export function ParallelReaderView({
 	onBack,
 }: ParallelReaderViewProps) {
 	const [zoomIndex, setZoomIndex] = useState(FIT_INDEX);
+	/*
+	  Null while the page is fitted to its column — that is the one mode where
+	  dragging the divider resizes the page. Any explicit zoom freezes the column
+	  width the zoom is measured against, so resizing the panels after that moves
+	  the divider without touching the page. `Fit` returns to tracking.
+	*/
+	const [fitBase, setFitBase] = useState<number | null>(null);
+	const [panX, setPanX] = useState(0);
 	const [split, setSplit] = useState(DEFAULT_SPLIT);
 	const [isDragging, setIsDragging] = useState(false);
 	const [availableWidth, setAvailableWidth] = useState(0);
@@ -263,6 +285,7 @@ export function ParallelReaderView({
 	const [confirmation, setConfirmation] = useState<string | null>(null);
 
 	const contentRef = useRef<HTMLDivElement>(null);
+	const panScrollRef = useRef<HTMLDivElement>(null);
 	const rowElements = useRef(new Map<number, HTMLElement>());
 	const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -323,8 +346,36 @@ export function ParallelReaderView({
 	// Fractional on purpose: an odd content width splits into two half-pixel
 	// columns, and rounding the page down leaves a sliver of gutter beside it.
 	const pdfCellWidth = isStacked ? availableWidth : availableWidth * split;
-	const renderWidth = Math.max((pdfCellWidth - PDF_PADDING * 2) * zoom, 160);
+	const baseWidth = fitBase ?? pdfCellWidth;
+	const renderWidth = Math.max((baseWidth - PDF_PADDING * 2) * zoom, 160);
 	const reservedHeight = renderWidth * aspectRatio;
+	/** How far the page sticks out of its column, in px. */
+	const overflowX = Math.max(0, renderWidth - pdfCellWidth);
+	const clampedPan = Math.min(panX, overflowX);
+
+	const enterZoom = useCallback(
+		(next: (index: number) => number) => {
+			// Freeze the column the zoom is measured against on the way out of fit.
+			setFitBase((current) => current ?? pdfCellWidth);
+			setZoomIndex(next);
+		},
+		[pdfCellWidth],
+	);
+
+	const fitToColumn = useCallback(() => {
+		setFitBase(null);
+		setZoomIndex(FIT_INDEX);
+		setPanX(0);
+		if (panScrollRef.current) panScrollRef.current.scrollLeft = 0;
+	}, []);
+
+	// A page that no longer overflows cannot stay panned.
+	useEffect(() => {
+		if (overflowX === 0 && panX !== 0) {
+			setPanX(0);
+			if (panScrollRef.current) panScrollRef.current.scrollLeft = 0;
+		}
+	}, [overflowX, panX]);
 
 	const handleAspectRatio = useCallback((pageNumber: number, ratio: number) => {
 		if (pageNumber !== 1) return;
@@ -572,11 +623,12 @@ export function ParallelReaderView({
 				canZoomIn={zoomIndex < ZOOM_STEPS.length - 1}
 				canZoomOut={zoomIndex > 0}
 				onSelect={scrollToPage}
+				isFitted={fitBase === null}
 				onZoomIn={() =>
-					setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))
+					enterZoom((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))
 				}
-				onZoomOut={() => setZoomIndex((index) => Math.max(0, index - 1))}
-				onFit={() => setZoomIndex(FIT_INDEX)}
+				onZoomOut={() => enterZoom((index) => Math.max(0, index - 1))}
+				onFit={fitToColumn}
 				onCopy={copyAllNotes}
 				onExport={exportNotes}
 				onBack={onBack}
@@ -650,12 +702,40 @@ export function ParallelReaderView({
 						isStacked={isStacked}
 						isFirst={pageNumber === 1}
 						isLast={pageNumber === docMeta.pageCount}
+						panX={overflowX > 0 ? clampedPan : null}
 						headerSlot={pageNumber === 1 ? titleSlot : undefined}
 						onAspectRatio={handleAspectRatio}
 						onNoteContentChange={handleNoteContentChange}
 						registerRow={registerRow}
 					/>
 				))}
+
+				{/*
+				  One horizontal scrollbar for the whole page column, stuck to the
+				  foot of the window. The old per-page scroller sat at the bottom
+				  edge of a page, so it was out of reach whenever that edge was off
+				  screen — which, on a page taller than the window, is most of the
+				  time.
+				*/}
+				{overflowX > 0 && !isStacked && (
+					<div
+						className="pointer-events-none sticky bottom-0 z-30 w-[var(--split)]"
+						style={{ height: 0 }}
+					>
+						{/* No ARIA label: this is a scroll container, not a control, and
+						    a page is reached by number from the rail rather than by
+						    panning. Keeping it unlabelled leaves it out of the reading
+						    order instead of announcing a decoration. */}
+						<div
+							ref={panScrollRef}
+							onScroll={(event) => setPanX(event.currentTarget.scrollLeft)}
+							title="Scroll the page sideways"
+							className="pdf-scroll pointer-events-auto absolute inset-x-0 bottom-0 overflow-x-auto overflow-y-hidden border-t border-rule bg-gutter"
+						>
+							<div style={{ width: renderWidth, height: 1 }} />
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);

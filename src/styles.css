@@ -224,12 +224,13 @@ body {
 }
 
 /*
-  The horizontal scroller under a zoomed page. It is the only way to reach the
-  rest of a page wider than its column, so it is drawn heavier than the page
-  scrollbar and always present rather than overlaid.
+  The one horizontal scroller for the page column, stuck to the foot of the
+  window. It is the only way to reach the rest of a page wider than its column,
+  so it is drawn heavier than the page scrollbar and is always on screen.
 */
 .pdf-scroll {
   scrollbar-color: var(--scroll-thumb-hover) var(--scroll-track);
+  scrollbar-width: auto;
 }
 
 .pdf-scroll::-webkit-scrollbar {
@@ -254,25 +255,28 @@ body {
 }
 
 /*
-  `.sideb` — the rail button. Nine of them share this one spec from the design,
-  so it lives here rather than being restated as nine utility strings.
+  `.sideb` — the rail button. Ten of them share this one spec, so it lives here
+  rather than being restated as ten utility strings. The design draws it at 12px
+  with 6px of side padding in a 64px rail; the owner asked for a narrower rail,
+  so the type and padding step down with it and the labels never wrap.
 */
 .sideb {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   min-height: 0;
-  padding: 5px 6px;
+  padding: 5px 3px;
   border: none;
   border-radius: var(--radius-control);
   background: none;
   color: var(--ink-2);
   font-family: var(--font-sans);
-  font-size: var(--text-tiny);
+  font-size: var(--text-micro);
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 120ms ease,
@@ -289,7 +293,8 @@ body {
   cursor: default;
 }
 
-.sideb[aria-current='page'] {
+.sideb[aria-current='page'],
+.sideb[aria-pressed='true'] {
   background: var(--tint-strong);
   color: var(--ink);
   font-weight: 600;
@@ -300,7 +305,7 @@ body {
 .sideb-dot {
   position: absolute;
   top: 50%;
-  right: 5px;
+  right: 3px;
   width: 3px;
   height: 3px;
   translate: 0 -50%;

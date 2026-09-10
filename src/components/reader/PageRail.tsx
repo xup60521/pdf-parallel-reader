@@ -9,6 +9,8 @@ interface PageRailProps {
 	zoomPercent: number;
 	canZoomIn: boolean;
 	canZoomOut: boolean;
+	/** True while the page is tracking its column rather than a frozen zoom. */
+	isFitted: boolean;
 	onSelect: (pageNumber: number) => void;
 	onZoomIn: () => void;
 	onZoomOut: () => void;
@@ -33,6 +35,7 @@ export function PageRail({
 	zoomPercent,
 	canZoomIn,
 	canZoomOut,
+	isFitted,
 	onSelect,
 	onZoomIn,
 	onZoomOut,
@@ -54,7 +57,7 @@ export function PageRail({
 	return (
 		<nav
 			aria-label="Pages"
-			className="sticky top-0 flex h-dvh w-16 shrink-0 flex-col border-r border-rule bg-rail px-2 py-2.5"
+			className="sticky top-0 flex h-dvh w-12 shrink-0 flex-col border-r border-rule bg-rail px-1 py-2"
 		>
 			<div className="flex flex-col gap-px">
 				<button
@@ -64,12 +67,12 @@ export function PageRail({
 					title="Back to the library"
 					aria-label="Back to the library"
 				>
-					<ArrowLeft className="size-3.5" />
+					<ArrowLeft className="size-3" />
 				</button>
 				<ThemeToggle />
 			</div>
 
-			<div className="mb-2 mt-1.5 border-b border-rule pb-2 text-center text-micro tabular-nums text-ink-2">
+			<div className="mb-1.5 mt-1 border-b border-rule pb-1.5 text-center text-micro tabular-nums text-ink-2">
 				{pageCount} pp
 			</div>
 
@@ -102,7 +105,7 @@ export function PageRail({
 				)}
 			</ol>
 
-			<div className="mt-2 flex flex-col gap-px border-t border-rule pt-2">
+			<div className="mt-1.5 flex flex-col gap-px border-t border-rule pt-1.5">
 				<button
 					type="button"
 					className="sideb"
@@ -111,7 +114,7 @@ export function PageRail({
 					title="Zoom in"
 					aria-label="Zoom in"
 				>
-					<Plus className="size-3.5" />
+					<Plus className="size-3" />
 				</button>
 				<span className="py-0.5 text-center text-micro tabular-nums text-ink-2">
 					{zoomPercent}%
@@ -124,19 +127,20 @@ export function PageRail({
 					title="Zoom out"
 					aria-label="Zoom out"
 				>
-					<Minus className="size-3.5" />
+					<Minus className="size-3" />
 				</button>
 				<button
 					type="button"
-					className="sideb mt-1.5"
+					className="sideb mt-1"
 					onClick={onFit}
-					title="Fit the page to its column"
+					aria-pressed={isFitted}
+					title="Fit the page to its column, and keep it fitted as the panels resize"
 				>
 					Fit
 				</button>
 				<button
 					type="button"
-					className="sideb mt-1.5"
+					className="sideb mt-1"
 					onClick={onCopy}
 					title="Copy every note as markdown"
 				>
@@ -144,7 +148,7 @@ export function PageRail({
 				</button>
 				<button
 					type="button"
-					className="sideb mt-1.5"
+					className="sideb mt-1"
 					onClick={onExport}
 					title="Download every note as markdown"
 				>
