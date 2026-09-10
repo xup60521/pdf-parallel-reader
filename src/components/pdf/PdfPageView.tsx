@@ -1,4 +1,4 @@
-import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import type { PDFDocumentProxy, RenderTask, TextLayer } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 import { getPdfjs } from "../../lib/pdf-service";
 import "./pdf-page.css";
@@ -25,6 +25,7 @@ export function PdfPageView({
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const textLayerRef = useRef<HTMLDivElement>(null);
 	const renderTaskRef = useRef<RenderTask | null>(null);
+	const textLayerTaskRef = useRef<TextLayer | null>(null);
 	const [height, setHeight] = useState<number | null>(null);
 	const [failed, setFailed] = useState(false);
 
@@ -40,6 +41,8 @@ export function PdfPageView({
 
 			renderTaskRef.current?.cancel();
 			renderTaskRef.current = null;
+			textLayerTaskRef.current?.cancel();
+			textLayerTaskRef.current = null;
 
 			try {
 				const page = await pdfDoc.getPage(pageNumber);
@@ -62,11 +65,11 @@ export function PdfPageView({
 				canvas.style.width = `${viewport.width}px`;
 				canvas.style.height = `${cssHeight}px`;
 
-				const context = canvas.getContext("2d", { alpha: false });
-				if (!context) return;
-				context.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-				const task = page.render({ canvas, canvasContext: context, viewport });
+				const task = page.render({
+					canvas,
+					viewport,
+					transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
+				});
 				renderTaskRef.current = task;
 				await task.promise;
 				if (cancelled) return;
@@ -81,17 +84,22 @@ export function PdfPageView({
 
 					const { TextLayer } = await getPdfjs();
 					if (cancelled) return;
-					await new TextLayer({
+					const textLayer = new TextLayer({
 						textContentSource: page.streamTextContent(),
 						container,
 						viewport,
-					}).render();
+					});
+					textLayerTaskRef.current = textLayer;
+					await textLayer.render();
 				}
 
 				setFailed(false);
 			} catch (error) {
 				if (
-					(error as { name?: string })?.name === "RenderingCancelledException"
+					cancelled ||
+					(error as { name?: string })?.name ===
+						"RenderingCancelledException" ||
+					(error as { name?: string })?.name === "AbortException"
 				) {
 					return;
 				}
@@ -106,6 +114,8 @@ export function PdfPageView({
 			cancelled = true;
 			renderTaskRef.current?.cancel();
 			renderTaskRef.current = null;
+			textLayerTaskRef.current?.cancel();
+			textLayerTaskRef.current = null;
 		};
 	}, [pdfDoc, pageNumber, width]);
 
