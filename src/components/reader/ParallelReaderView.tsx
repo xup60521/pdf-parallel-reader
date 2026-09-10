@@ -1,7 +1,8 @@
-import { Check } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
 	type ReactNode,
+	type SetStateAction,
 	useCallback,
 	useEffect,
 	useLayoutEffect,
@@ -22,7 +23,8 @@ import { PdfPageView } from "../pdf/PdfPageView";
 import { PageRail } from "./PageRail";
 
 const ZOOM_STEPS = [0.5, 0.67, 0.8, 1, 1.25, 1.5, 2, 2.5, 3];
-const FIT_INDEX = ZOOM_STEPS.indexOf(1);
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 3;
 
 /*
   The design pads its page column 36px on every side. The owner asked for the
@@ -36,8 +38,48 @@ const NOTE_PADDING = 40;
 const MIN_SPLIT = 0.2;
 const MAX_SPLIT = 0.8;
 const DEFAULT_SPLIT = 0.5;
+const SPLIT_STORAGE_KEY = "pdf-parallel-reader:split:v1";
 /** One arrow key press on the divider, as a fraction of the reading area. */
 const SPLIT_STEP = 0.02;
+
+function clampSplit(value: number) {
+	return Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, value));
+}
+
+function loadStoredSplit() {
+	try {
+		const value = Number(localStorage.getItem(SPLIT_STORAGE_KEY));
+		return Number.isFinite(value) && value >= MIN_SPLIT && value <= MAX_SPLIT
+			? value
+			: null;
+	} catch {
+		return null;
+	}
+}
+
+function storeSplit(value: number) {
+	try {
+		localStorage.setItem(SPLIT_STORAGE_KEY, String(value));
+	} catch {
+		// Storage can be unavailable in private browsing or restricted contexts.
+	}
+}
+
+function clampZoom(value: number) {
+	return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+function nextZoomStep(current: number, direction: -1 | 1) {
+	const epsilon = 0.0001;
+	if (direction > 0) {
+		return ZOOM_STEPS.find((step) => step > current + epsilon) ?? MAX_ZOOM;
+	}
+	for (let index = ZOOM_STEPS.length - 1; index >= 0; index -= 1) {
+		const step = ZOOM_STEPS[index];
+		if (step !== undefined && step < current - epsilon) return step;
+	}
+	return MIN_ZOOM;
+}
 
 /**
  * A click in the note column that lands on nothing — the padding, the space
@@ -185,6 +227,7 @@ function PageRow({
 				aria-label={`Page ${pageNumber}`}
 			>
 				<div
+					data-pdf-panel
 					className="overflow-x-auto bg-gutter"
 					style={{ paddingTop: isFirst ? 20 : 0, paddingBottom: 18 }}
 				>
@@ -220,6 +263,7 @@ function PageRow({
 			  so every page pans together and the control is always reachable.
 			*/}
 			<div
+				data-pdf-panel
 				className="h-full overflow-x-clip bg-gutter"
 				style={{
 					paddingInline: PDF_PADDING,
@@ -266,7 +310,7 @@ export function ParallelReaderView({
 	initialNotes,
 	onBack,
 }: ParallelReaderViewProps) {
-	const [zoomIndex, setZoomIndex] = useState(FIT_INDEX);
+	const [zoom, setZoom] = useState(1);
 	/*
 	  Null while the page is fitted to its column — that is the one mode where
 	  dragging the divider resizes the page. Any explicit zoom freezes the column
@@ -275,7 +319,16 @@ export function ParallelReaderView({
 	*/
 	const [fitBase, setFitBase] = useState<number | null>(null);
 	const [panX, setPanX] = useState(0);
-	const [split, setSplit] = useState(DEFAULT_SPLIT);
+	const [split, setSplitState] = useState(DEFAULT_SPLIT);
+	const setSplit = useCallback((next: SetStateAction<number>) => {
+		setSplitState((current) => {
+			const value = clampSplit(
+				typeof next === "function" ? next(current) : next,
+			);
+			storeSplit(value);
+			return value;
+		});
+	}, []);
 	const [isDragging, setIsDragging] = useState(false);
 	const [availableWidth, setAvailableWidth] = useState(0);
 	const [currentPage, setCurrentPage] = useState(1);
@@ -288,6 +341,14 @@ export function ParallelReaderView({
 	const panScrollRef = useRef<HTMLDivElement>(null);
 	const rowElements = useRef(new Map<number, HTMLElement>());
 	const titleInputRef = useRef<HTMLInputElement>(null);
+
+	// Restore before paint so returning readers do not see the divider jump from
+	// its default position. User-driven updates go through `setSplit`, which
+	// persists the clamped value without an effect that could overwrite storage.
+	useLayoutEffect(() => {
+		const stored = loadStoredSplit();
+		if (stored !== null) setSplitState(stored);
+	}, []);
 
 	const [pagesWithNotes, setPagesWithNotes] = useState<ReadonlySet<number>>(
 		() =>
@@ -335,7 +396,6 @@ export function ParallelReaderView({
 		return () => observer.disconnect();
 	}, []);
 
-	const zoom = ZOOM_STEPS[zoomIndex] ?? 1;
 	// Rendering before the column reports its width would draw every visible
 	// page twice: once at the fallback width, once at the real one.
 	const isMeasured = availableWidth > 0;
@@ -354,20 +414,64 @@ export function ParallelReaderView({
 	const clampedPan = Math.min(panX, overflowX);
 
 	const enterZoom = useCallback(
-		(next: (index: number) => number) => {
+		(next: (zoom: number) => number) => {
 			// Freeze the column the zoom is measured against on the way out of fit.
 			setFitBase((current) => current ?? pdfCellWidth);
-			setZoomIndex(next);
+			setZoom((current) => clampZoom(next(current)));
 		},
 		[pdfCellWidth],
 	);
 
 	const fitToColumn = useCallback(() => {
 		setFitBase(null);
-		setZoomIndex(FIT_INDEX);
+		setZoom(1);
 		setPanX(0);
 		if (panScrollRef.current) panScrollRef.current.scrollLeft = 0;
 	}, []);
+
+	/*
+	  Wheel gestures belong to the page band, not the whole reader. A native
+	  non-passive listener is required here: Ctrl+wheel must cancel the browser's
+	  own page zoom before stepping the PDF zoom, while Shift+wheel forwards the
+	  wheel delta to the one shared horizontal scroller.
+	*/
+	useEffect(() => {
+		const content = contentRef.current;
+		if (!content) return;
+
+		const onWheel = (event: WheelEvent) => {
+			if (!(event.target instanceof Element)) return;
+			if (!event.target.closest("[data-pdf-panel]")) return;
+
+			if (event.ctrlKey && !event.altKey && !event.metaKey) {
+				event.preventDefault();
+				if (event.deltaY === 0) return;
+				enterZoom((current) =>
+					event.deltaY < 0
+						? nextZoomStep(current, 1)
+						: nextZoomStep(current, -1),
+				);
+				return;
+			}
+
+			if (!event.shiftKey || event.metaKey || isStacked) return;
+			const scroller = panScrollRef.current;
+			if (!scroller || scroller.scrollWidth <= scroller.clientWidth) return;
+
+			const delta = event.deltaX !== 0 ? event.deltaX : event.deltaY;
+			if (delta === 0) return;
+			event.preventDefault();
+			const nextPan = Math.min(
+				scroller.scrollWidth - scroller.clientWidth,
+				Math.max(0, scroller.scrollLeft + delta),
+			);
+			scroller.scrollLeft = nextPan;
+			setPanX(nextPan);
+		};
+
+		content.addEventListener("wheel", onWheel, { passive: false });
+		return () => content.removeEventListener("wheel", onWheel);
+	}, [enterZoom, isStacked]);
 
 	// A page that no longer overflows cannot stay panned.
 	useEffect(() => {
@@ -528,14 +632,17 @@ export function ParallelReaderView({
 
 	/* ---- The divider: the split is dragged, not derived from zoom ---- */
 
-	const applySplitFromClientX = useCallback((clientX: number) => {
-		const content = contentRef.current;
-		if (!content) return;
-		const rect = content.getBoundingClientRect();
-		if (rect.width <= 0) return;
-		const fraction = (clientX - rect.left) / rect.width;
-		setSplit(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, fraction)));
-	}, []);
+	const applySplitFromClientX = useCallback(
+		(clientX: number) => {
+			const content = contentRef.current;
+			if (!content) return;
+			const rect = content.getBoundingClientRect();
+			if (rect.width <= 0) return;
+			const fraction = (clientX - rect.left) / rect.width;
+			setSplit(fraction);
+		},
+		[setSplit],
+	);
 
 	// Bound to the window rather than the handle: a pointer that outruns a 9px
 	// strip must keep dragging it, and releasing outside the window must still
@@ -572,9 +679,7 @@ export function ParallelReaderView({
 			return;
 		}
 		event.preventDefault();
-		setSplit((current) =>
-			Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, current + delta)),
-		);
+		setSplit((current) => current + delta);
 	}
 
 	/*
@@ -583,7 +688,7 @@ export function ParallelReaderView({
 	  the head of the note column so it reads as the quietest line on the page.
 	*/
 	const titleSlot = (
-		<div className="mb-3">
+		<div className="mb-3 flex items-center gap-1">
 			{isRenaming ? (
 				<input
 					ref={titleInputRef}
@@ -598,18 +703,27 @@ export function ParallelReaderView({
 						}
 					}}
 					aria-label="Document name"
-					className="plabel w-full rounded-chip border border-rule-strong bg-paper px-1.5 py-1 text-ink outline-none"
+					className="plabel min-w-0 flex-1 rounded-chip border border-rule-strong bg-paper px-1.5 py-1 text-ink outline-none"
 				/>
 			) : (
 				<button
 					type="button"
 					onClick={() => setIsRenaming(true)}
 					title="Rename this document"
-					className="plabel -mx-1.5 max-w-full truncate rounded-chip px-1.5 py-1 text-left hover:bg-tint hover:text-ink"
+					className="plabel -ml-1.5 min-w-0 flex-1 truncate rounded-chip px-1.5 py-1 text-left hover:bg-tint hover:text-ink"
 				>
 					{title}
 				</button>
 			)}
+			<button
+				type="button"
+				onClick={copyAllNotes}
+				title="Copy all notes as Markdown"
+				aria-label="Copy all notes as Markdown"
+				className="shrink-0 rounded-chip p-1.5 text-ink-2 hover:bg-tint hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink"
+			>
+				<Copy className="size-3.5" />
+			</button>
 		</div>
 	);
 
@@ -620,16 +734,14 @@ export function ParallelReaderView({
 				currentPage={currentPage}
 				pagesWithNotes={pagesWithNotes}
 				zoomPercent={Math.round(zoom * 100)}
-				canZoomIn={zoomIndex < ZOOM_STEPS.length - 1}
-				canZoomOut={zoomIndex > 0}
+				canZoomIn={zoom < MAX_ZOOM}
+				canZoomOut={zoom > MIN_ZOOM}
 				onSelect={scrollToPage}
 				isFitted={fitBase === null}
-				onZoomIn={() =>
-					enterZoom((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))
-				}
-				onZoomOut={() => enterZoom((index) => Math.max(0, index - 1))}
+				onZoomIn={() => enterZoom((current) => nextZoomStep(current, 1))}
+				onZoomOut={() => enterZoom((current) => nextZoomStep(current, -1))}
+				onZoomChange={(percent) => enterZoom(() => percent / 100)}
 				onFit={fitToColumn}
-				onCopy={copyAllNotes}
 				onExport={exportNotes}
 				onBack={onBack}
 			/>
