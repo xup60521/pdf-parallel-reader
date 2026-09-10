@@ -527,4 +527,25 @@ If the new design settles either one, I will follow the design over those defaul
 
 # → Ask / A-004
 
-+
++ login success. it should work now
+
+## [RUN-001] Event (during round A-004)
+
+- Route: direct. The owner authorized the design tool, so this round executes the A-003 request.
+- `DesignSync list_files` on project `018d4342-8ec0-454e-8a6e-03efb6472349` now succeeds; the
+  project holds `PDF Notes Wireframes/PDF Notes/PDF Notes v2/PDF Notes v3` plus the "Organic"
+  design system under `_ds/organic-a84f43e8-.../`.
+- `get_file` returned `PDF Notes v3.dc.html` in full, untruncated. Saved verbatim at
+  `.agentflow/artifacts/A-004-design-refactor/PDF Notes v3.dc.html`.
+- The design file overrides nearly all of the Organic system inline. The only inherited token is
+  `--font-body: "Figtree", system-ui, sans-serif`, confirmed from `_ds_manifest.json`.
+- Read the current implementation directly: `src/styles.css`, `ParallelReaderView.tsx`,
+  `PageRail.tsx`, `NoteEditor.tsx`, `editor.css`, `pdf-page.css`, `PdfPageView.tsx`, `Button.tsx`,
+  `ThemeToggle.tsx`, `DocumentOverview.tsx`, `routes/index.tsx`, `routes/__root.tsx`.
+- Design record written at `.agentflow/artifacts/A-004-design-refactor/design.md`: nine measured
+  gaps, the follow-exactly list, the converge list, four necessary added concepts with rejected
+  smaller alternatives, three rejected larger alternatives, and an eight-step normal journey.
+- Tracker created with seven tasks; `tracker-contract.js validate` PASS.
+- Standing assumption, stated because the owner left the A-003 questions unanswered: converge
+  rather than replace — the design drives every visual decision, and proven behavior the mock
+  cannot express (sticky pin, windowing, Markdown round-trip, dark mode) is kept and re-skinned.
