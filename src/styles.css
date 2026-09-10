@@ -1,201 +1,157 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Literata:ital,opsz,wght@0,7..72,400..700;1,7..72,400..600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
 @import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Ink, paper, desk.
+  Warm paper.
 
-  One palette, one source of truth. Every surface in the app resolves to a token
-  below; nothing hardcodes a Tailwind color ramp. The shadcn-compatible aliases at
-  the bottom of each block are derived from the same values so a generated
-  component lands in the right skin instead of introducing a second palette.
+  Every value below is read off `PDF Notes v3.dc.html` (kept verbatim in
+  .agentflow/artifacts/A-004-design-refactor/). The design is monochrome warm
+  grey with exactly one chromatic value — the terracotta on inline code — and no
+  shadows at all. The dark skin is derived: the same roles on a warm dark
+  ground, because the design file is light-only.
 */
 
 :root {
   color-scheme: light;
 
-  /* Surfaces */
-  --desk: #e8e8ef;
-  --surface: #ffffff;
-  --surface-2: #f4f4f8;
-  --surface-3: #ededf3;
-  --paper: #ffffff;
+  /* Grounds. The three columns each have their own. */
+  --paper: #ffffff; /* the note column, and every menu surface */
+  --rail: #f7f6f3; /* the 64px control rail */
+  --gutter: #f1f0ee; /* the band the PDF pages sit in */
+  --surface: #ffffff; /* popovers, floating menus */
 
-  /* Text */
-  --ink: #191b22;
-  --ink-2: #565b6e;
-  --ink-3: #61667a;
+  /* A rendered PDF page is white paper in both skins; it is never inverted, so
+     anything drawn over it needs a colour that does not follow the skin. */
+  --sheet: #ffffff;
+  --on-sheet: #37352f;
+  --on-sheet-2: #787066;
 
-  /* Lines */
-  --rule: #dcdce4;
-  --rule-strong: #c6c7d2;
+  /* Text. Two tiers carry meaning; --ink-faint is placeholder chrome only. */
+  --ink: #37352f;
+  --ink-2: #787066;
+  --ink-faint: #9b948a;
 
-  /* Fountain-pen ink: the accent */
-  --quill: #4238b8;
-  --quill-hover: #372fa0;
-  --quill-soft: #eceafb;
+  /* Lines and tints. Alpha, so they read the same over any of the grounds. */
+  --rule: rgb(55 53 47 / 0.09);
+  --rule-strong: rgb(55 53 47 / 0.12);
+  --tint: rgb(55 53 47 / 0.08); /* hover */
+  --tint-strong: rgb(55 53 47 / 0.09); /* current, pressed */
 
-  /* Highlighter ochre: marks a page that carries a note */
-  --marker: #b0821a;
-  --marker-ink: #8a6410;
-  --highlight-bg: #fbe9a7;
+  /* The single chromatic value in the design, on inline code. */
+  --accent: #a3492c;
+  --code-bg: rgb(135 131 120 / 0.15);
+
+  --highlight-bg: rgb(214 164 74 / 0.38);
   --highlight-ink: #4a3a05;
 
-  --danger: #b3261e;
-  --danger-soft: #fcebea;
+  --danger: #a3352c;
+  --danger-soft: rgb(163 53 44 / 0.09);
 
-  /* Depth: resting, floating, and the paper sheet. */
-  --shadow-rest: 0 1px 2px rgb(25 27 34 / 0.05), 0 1px 1px rgb(25 27 34 / 0.03);
-  --shadow-float: 0 16px 40px -10px rgb(25 27 34 / 0.22), 0 4px 12px -4px rgb(25 27 34 / 0.1);
-  --shadow-sheet: 0 2px 4px rgb(25 27 34 / 0.07), 0 8px 20px -8px rgb(25 27 34 / 0.13);
+  /*
+    The design draws no shadow anywhere. The one exception is a menu that floats
+    over the text it acts on, which needs to separate from it.
+  */
+  --shadow-float: 0 12px 32px -12px rgb(55 53 47 / 0.28), 0 2px 8px -4px rgb(55 53 47 / 0.16);
 
-  /* Radii carry hierarchy: a sheet of paper is not a chip. */
-  --radius-sheet: 3px;
-  --radius-chip: 6px;
-  --radius-control: 8px;
-  --radius-panel: 12px;
-
-  /* shadcn-compatible aliases, derived from the palette above */
-  --background: var(--desk);
-  --foreground: var(--ink);
-  --card: var(--surface);
-  --card-foreground: var(--ink);
-  --popover: var(--surface);
-  --popover-foreground: var(--ink);
-  --primary: var(--quill);
-  --primary-foreground: #ffffff;
-  --secondary: var(--surface-2);
-  --secondary-foreground: var(--ink);
-  --muted: var(--surface-2);
-  --muted-foreground: var(--ink-2);
-  --accent: var(--quill-soft);
-  --accent-foreground: var(--quill);
-  --destructive: var(--danger);
-  --destructive-foreground: #ffffff;
-  --border: var(--rule);
-  --input: var(--rule);
-  --ring: var(--quill);
-  --radius: 0.5rem;
+  /* Flat: 2px on a page, 3px on code, 6px on a control. */
+  --radius-sheet: 2px;
+  --radius-chip: 3px;
+  --radius-control: 6px;
 }
 
 .dark {
   color-scheme: dark;
 
-  --desk: #101117;
-  --surface: #191b23;
-  --surface-2: #21232d;
-  --surface-3: #2a2d39;
-  --paper: #ffffff;
+  --paper: #1c1b19;
+  --rail: #242320;
+  --gutter: #151513;
+  --surface: #2a2926;
 
-  --ink: #e9e9f0;
-  --ink-2: #a0a4b8;
-  --ink-3: #7f8499;
+  --sheet: #ffffff;
+  --on-sheet: #37352f;
+  --on-sheet-2: #787066;
 
-  --rule: #2c2f3a;
-  --rule-strong: #3a3e4c;
+  --ink: #eceae4;
+  --ink-2: #a8a196;
+  --ink-faint: #7d766c;
 
-  --quill: #9a90ff;
-  --quill-hover: #b0a8ff;
-  --quill-soft: #23213a;
+  --rule: rgb(255 251 240 / 0.11);
+  --rule-strong: rgb(255 251 240 / 0.16);
+  --tint: rgb(255 251 240 / 0.07);
+  --tint-strong: rgb(255 251 240 / 0.11);
 
-  --marker: #e0b84a;
-  --marker-ink: #e0b84a;
-  --highlight-bg: #5c4a17;
-  --highlight-ink: #fbeec4;
+  --accent: #e08a63;
+  --code-bg: rgb(150 143 130 / 0.18);
 
-  --danger: #f2837b;
-  --danger-soft: #35201f;
+  --highlight-bg: rgb(214 164 74 / 0.28);
+  --highlight-ink: #f6e6bd;
 
-  --shadow-rest: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-float: 0 16px 40px -10px rgb(0 0 0 / 0.7), 0 4px 12px -4px rgb(0 0 0 / 0.5);
-  --shadow-sheet: 0 2px 6px rgb(0 0 0 / 0.5), 0 10px 26px -10px rgb(0 0 0 / 0.6);
+  --danger: #e58a80;
+  --danger-soft: rgb(229 138 128 / 0.12);
 
-  --primary-foreground: #14121f;
-  --destructive-foreground: #2a100e;
+  --shadow-float: 0 12px 32px -10px rgb(0 0 0 / 0.7), 0 2px 8px -4px rgb(0 0 0 / 0.5);
 }
 
 @theme inline {
-  --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Literata', Georgia, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: 'Figtree', system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
-  --color-desk: var(--desk);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
   --color-paper: var(--paper);
+  --color-rail: var(--rail);
+  --color-gutter: var(--gutter);
+  --color-surface: var(--surface);
+  --color-sheet: var(--sheet);
+  --color-on-sheet: var(--on-sheet);
+  --color-on-sheet-2: var(--on-sheet-2);
 
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
-  --color-ink-3: var(--ink-3);
+  --color-ink-faint: var(--ink-faint);
 
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
+  --color-tint: var(--tint);
+  --color-tint-strong: var(--tint-strong);
 
-  --color-quill: var(--quill);
-  --color-quill-hover: var(--quill-hover);
-  --color-quill-soft: var(--quill-soft);
-
-  --color-marker: var(--marker);
-  --color-marker-ink: var(--marker-ink);
-
+  --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
 
   --radius-sheet: var(--radius-sheet);
   --radius-chip: var(--radius-chip);
   --radius-control: var(--radius-control);
-  --radius-panel: var(--radius-panel);
 
-  --shadow-rest: var(--shadow-rest);
   --shadow-float: var(--shadow-float);
-  --shadow-sheet: var(--shadow-sheet);
 
-  /* Minor third from a 13px UI base. */
-  --text-micro: 0.6875rem;
+  /* The design's four text sizes, exactly. */
+  --text-micro: 0.6875rem; /* 11px — the page count, the zoom label */
   --text-micro--line-height: 1rem;
-  --text-tiny: 0.75rem;
+  --text-tiny: 0.75rem; /* 12px — rail buttons, the page label */
   --text-tiny--line-height: 1.1rem;
-  --text-ui: 0.8125rem;
+  --text-ui: 0.8125rem; /* 13px — inline code, the slash hint */
   --text-ui--line-height: 1.25rem;
+  --text-note: 0.9375rem; /* 15px — note prose */
+  --text-note--line-height: 1.75;
 }
 
+/* The page itself scrolls and the rail sticks to it, as the design specifies —
+   so these are minimums, not fixed heights. */
 html,
 body,
 #app {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  background-color: var(--desk);
+  background-color: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv05' 1;
 }
 
 @layer base {
@@ -205,14 +161,15 @@ body {
     border-color: var(--rule);
   }
 
+  /* The design's focus ring: the text colour, 2px, 1px out. Never the default. */
   :focus-visible {
-    outline: 2px solid var(--quill);
-    outline-offset: 2px;
-    border-radius: 3px;
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+    border-radius: 2px;
   }
 
   ::selection {
-    background: var(--quill-soft);
+    background: var(--tint-strong);
     color: var(--ink);
   }
 
@@ -233,79 +190,81 @@ body {
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--ink-3);
+    background: var(--ink-faint);
     background-clip: content-box;
   }
 }
 
 /*
-  The spine: the ruled gutter between a page and its note. This is the one place
-  the design raises its voice, so it lives here rather than in utility soup.
+  `.sideb` — the rail button. Nine of them share this one spec from the design,
+  so it lives here rather than being restated as nine utility strings.
 */
-.spine {
-  position: relative;
-  flex: none;
-  width: 2.25rem;
-  align-self: stretch;
-}
-
-.spine::before {
-  content: '';
-  position: absolute;
-  inset-block: 0.25rem 0;
-  left: 50%;
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    var(--rule-strong) 0,
-    var(--rule) 3rem,
-    var(--rule) calc(100% - 2rem),
-    transparent 100%
-  );
-}
-
-.spine-tick {
-  position: sticky;
-  top: 0.75rem;
-  z-index: 1;
+.sideb {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  padding-block: 0.35rem;
-  background: var(--desk);
-}
-
-.spine-number {
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+  padding: 5px 6px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-tiny);
   font-variant-numeric: tabular-nums;
-  font-size: var(--text-micro);
+  line-height: 1.25;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.sideb:hover:not(:disabled) {
+  background: var(--tint);
+  color: var(--ink);
+}
+
+.sideb:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sideb[aria-current='page'] {
+  background: var(--tint-strong);
+  color: var(--ink);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ink-3);
-  transition: color 160ms ease;
 }
 
-.spine-tick[data-current='true'] .spine-number {
-  color: var(--quill);
-}
-
-.spine-dot {
-  width: 5px;
-  height: 5px;
+/* The dot that marks a page carrying a note. The mock shows no annotated page,
+   so this is the smallest addition that keeps a working affordance. */
+.sideb-dot {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  width: 3px;
+  height: 3px;
+  translate: 0 -50%;
   border-radius: 999px;
-  background: var(--marker);
+  background: var(--accent);
 }
 
-/* A rendered PDF page reads as a physical sheet: square-ish, lightly lifted. */
+/* `.plabel` — "Page 2" above a note, and the same voice for the doc title. */
+.plabel {
+  font-size: var(--text-tiny);
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+
+/*
+  A rendered PDF page. The design draws a hairline border on it; the owner asked
+  for it borderless and full-bleed in its column, so the page is a plain white
+  field and the `--gutter` band around it is what separates one page from the
+  next.
+*/
 .sheet {
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sheet);
-  box-shadow: var(--shadow-sheet);
-}
-
-.dark .sheet {
-  border-color: #443f31;
+  background: var(--sheet);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -317,21 +276,4 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-/* The spine turned on its side, for the stacked layout on narrow screens. */
-.spine-rule {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--rule);
-}
-
-.spine-rule[data-current='true'] {
-  border-bottom-color: var(--rule-strong);
-}
-
-.spine-rule[data-current='true'] .spine-number {
-  color: var(--quill);
 }

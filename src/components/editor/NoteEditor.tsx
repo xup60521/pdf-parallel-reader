@@ -21,11 +21,18 @@ interface NoteEditorProps {
 
 const SAVE_DEBOUNCE_MS = 600;
 
+/**
+ * A note, with no chrome around it.
+ *
+ * The design gives the note column no card, no border and no status bar: the
+ * note is text on the page. Everything that used to live in a permanent strip
+ * now shares the `Page N` label row and appears only on hover or focus.
+ */
 export function NoteEditor({
 	pdfId,
 	pageNumber,
 	initialMarkdown = "",
-	minHeight = 320,
+	minHeight = 200,
 	onContentChange,
 }: NoteEditorProps) {
 	const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -88,9 +95,7 @@ export function NoteEditor({
 
 	const editor = useEditor({
 		immediatelyRender: false,
-		extensions: createNoteExtensions({
-			placeholder: "Write about this page, or press / for blocks",
-		}),
+		extensions: createNoteExtensions({ placeholder: "Write a note…" }),
 		content: markdownToHtml(initialMarkdown),
 		editorProps: {
 			attributes: {
@@ -167,48 +172,23 @@ export function NoteEditor({
 	const words = rawText.trim() ? rawText.trim().split(/\s+/).length : 0;
 
 	return (
-		<div
-			style={{ minHeight }}
-			className="group/note flex flex-col rounded-panel border border-rule bg-surface transition-colors focus-within:border-quill/45"
-		>
-			<div className="relative flex-1">
-				{isRawMode ? (
-					<textarea
-						value={rawText}
-						onChange={(event) => handleRawChange(event.target.value)}
-						spellCheck={false}
-						aria-label={`Raw markdown for page ${pageNumber}`}
-						placeholder={`# Page ${pageNumber}`}
-						className="size-full min-h-[inherit] resize-none rounded-panel bg-transparent p-4 font-mono text-tiny leading-relaxed text-ink outline-none placeholder:text-ink-3"
-					/>
-				) : (
-					<>
-						{editor && <NoteBubbleMenu editor={editor} />}
-						<EditorContent editor={editor} className="note-surface" />
-					</>
-				)}
-			</div>
-
-			{/* Status strip. Reading, not writing, is the default state, so the
-			    controls stay quiet until the note is hovered or focused. */}
-			<div className="flex items-center justify-between gap-2 border-t border-rule px-3 py-1.5 text-micro text-ink-3">
+		<div className="group/note">
+			{/*
+			  The design's `.plabel` row. It names the page on the left; the note's
+			  own controls sit on the right and stay invisible until the note is
+			  hovered or focused, so reading a note shows only the note.
+			*/}
+			<div className="plabel mb-[11px] flex h-5 items-center justify-between gap-2">
 				<span className="flex items-center gap-1.5">
-					<span
-						aria-hidden
-						className={cn(
-							"size-1.5 rounded-full transition-colors",
-							saveState === "pending" && "bg-marker",
-							saveState === "saved" && "bg-quill",
-							saveState === "idle" && "bg-rule-strong",
-						)}
-					/>
-					{/* The dot already carries the save state, so the label spends its
-					    room on the number you actually want while writing. */}
-					{saveState === "pending"
-						? "Saving"
-						: words > 0
-							? `${words} ${words === 1 ? "word" : "words"}`
-							: "Empty"}
+					Page {pageNumber}
+					{saveState === "pending" && (
+						<span className="text-ink-faint">· saving</span>
+					)}
+					{saveState === "saved" && words > 0 && (
+						<span className="text-ink-faint">
+							· {words} {words === 1 ? "word" : "words"}
+						</span>
+					)}
 				</span>
 
 				<span className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/note:opacity-100">
@@ -217,10 +197,10 @@ export function NoteEditor({
 						onClick={copyMarkdown}
 						title="Copy this note as markdown"
 						aria-label="Copy this note as markdown"
-						className="flex items-center gap-1 rounded-chip px-1.5 py-1 hover:bg-surface-3 hover:text-ink"
+						className="flex items-center gap-1 rounded-chip px-1.5 py-0.5 hover:bg-tint hover:text-ink"
 					>
 						{copied ? (
-							<Check className="size-3 text-quill" />
+							<Check className="size-3 text-accent" />
 						) : (
 							<Copy className="size-3" />
 						)}
@@ -231,7 +211,7 @@ export function NoteEditor({
 						onClick={toggleRawMode}
 						aria-pressed={isRawMode}
 						title={isRawMode ? "Back to the editor" : "Edit raw markdown"}
-						className="flex items-center gap-1 rounded-chip px-1.5 py-1 hover:bg-surface-3 hover:text-ink"
+						className="flex items-center gap-1 rounded-chip px-1.5 py-0.5 hover:bg-tint hover:text-ink"
 					>
 						{isRawMode ? (
 							<PenLine className="size-3" />
@@ -241,6 +221,27 @@ export function NoteEditor({
 						{isRawMode ? "Editor" : "Markdown"}
 					</button>
 				</span>
+			</div>
+
+			<div style={{ minHeight }} className="relative">
+				{isRawMode ? (
+					<textarea
+						value={rawText}
+						onChange={(event) => handleRawChange(event.target.value)}
+						spellCheck={false}
+						aria-label={`Raw markdown for page ${pageNumber}`}
+						placeholder={`# Page ${pageNumber}`}
+						className={cn(
+							"size-full min-h-[inherit] resize-none rounded-chip bg-tint p-3",
+							"font-mono text-ui leading-relaxed text-ink outline-none placeholder:text-ink-faint",
+						)}
+					/>
+				) : (
+					<>
+						{editor && <NoteBubbleMenu editor={editor} />}
+						<EditorContent editor={editor} className="note-surface" />
+					</>
+				)}
 			</div>
 		</div>
 	);

@@ -56,7 +56,7 @@
 }
 
 .pdf-text-layer ::selection {
-	background: color-mix(in srgb, var(--quill), transparent 68%);
+	background: color-mix(in srgb, var(--accent), transparent 72%);
 	color: transparent;
 }
 

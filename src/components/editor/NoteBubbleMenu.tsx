@@ -35,8 +35,8 @@ function MarkButton({ icon: Icon, label, isActive, onClick }: MarkButtonProps) {
 			className={cn(
 				"flex size-7 items-center justify-center rounded-chip transition-colors",
 				isActive
-					? "bg-quill text-white dark:text-[color:var(--primary-foreground)]"
-					: "text-ink-2 hover:bg-surface-3 hover:text-ink",
+					? "bg-ink text-paper"
+					: "text-ink-2 hover:bg-tint hover:text-ink",
 			)}
 		>
 			<Icon className="size-3.5" />

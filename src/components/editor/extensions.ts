@@ -15,6 +15,8 @@ import { SlashCommand } from "./slash/slash-command";
  * Beyond the basics, the set is chosen for what someone actually writes while
  * reading a paper: highlights, checkboxes for follow-ups, tables, and math.
  */
+const slashHint = "Type / for commands";
+
 export function createNoteExtensions(options: {
 	placeholder: string;
 	interactive?: boolean;
@@ -40,9 +42,14 @@ export function createNoteExtensions(options: {
 		}),
 		Mathematics,
 		MarkdownPaste,
+		/*
+		  Two hints, as the design draws them: the empty note says what it is for,
+		  and an empty line inside a written note points at the slash menu.
+		*/
 		Placeholder.configure({
-			placeholder,
+			placeholder: ({ editor }) => (editor.isEmpty ? placeholder : slashHint),
 			showOnlyWhenEditable: true,
+			showOnlyCurrent: true,
 		}),
 	];
 

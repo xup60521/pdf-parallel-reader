@@ -63,7 +63,7 @@ export const SlashCommandList = forwardRef<
 
 	if (items.length === 0) {
 		return (
-			<div className="w-64 rounded-panel border border-rule bg-surface px-3 py-2.5 text-ui text-ink-3 shadow-float">
+			<div className="w-64 rounded-control border border-rule-strong bg-surface px-3 py-2.5 text-ui text-ink-2 shadow-float">
 				Nothing matches that
 			</div>
 		);
@@ -74,7 +74,7 @@ export const SlashCommandList = forwardRef<
 	return (
 		<div
 			ref={containerRef}
-			className="max-h-[19rem] w-64 overflow-y-auto overscroll-contain rounded-panel border border-rule bg-surface p-1 shadow-float"
+			className="max-h-[19rem] w-64 overflow-y-auto overscroll-contain rounded-control border border-rule-strong bg-surface p-1 shadow-float"
 		>
 			{items.map((item, index) => {
 				const Icon = item.icon;
@@ -85,7 +85,7 @@ export const SlashCommandList = forwardRef<
 				return (
 					<div key={item.title}>
 						{showGroup && (
-							<div className="px-2 pt-2 pb-1 text-micro font-semibold text-ink-3">
+							<div className="px-2 pt-2 pb-1 text-micro font-semibold text-ink-2">
 								{item.group}
 							</div>
 						)}
@@ -96,15 +96,15 @@ export const SlashCommandList = forwardRef<
 							onMouseEnter={() => setSelectedIndex(index)}
 							className={cn(
 								"flex w-full items-center gap-2.5 rounded-chip px-2 py-1.5 text-left transition-colors",
-								isActive ? "bg-quill-soft" : "bg-transparent",
+								isActive ? "bg-tint-strong" : "bg-transparent",
 							)}
 						>
 							<span
 								className={cn(
 									"flex size-6 shrink-0 items-center justify-center rounded-chip border",
 									isActive
-										? "border-transparent bg-quill text-white dark:text-[color:var(--primary-foreground)]"
-										: "border-rule bg-surface-2 text-ink-2",
+										? "border-transparent bg-ink text-paper"
+										: "border-rule-strong bg-tint text-ink-2",
 								)}
 							>
 								<Icon className="size-3.5" />
@@ -113,7 +113,7 @@ export const SlashCommandList = forwardRef<
 								<span className="block truncate text-ui font-medium text-ink">
 									{item.title}
 								</span>
-								<span className="block truncate text-micro text-ink-3">
+								<span className="block truncate text-micro text-ink-2">
 									{item.subtitle}
 								</span>
 							</span>

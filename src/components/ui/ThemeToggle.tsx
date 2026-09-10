@@ -7,12 +7,14 @@ import {
 	resolveTheme,
 	storeThemePreference,
 } from "../../lib/theme";
-import { Button } from "./Button";
+import { cn } from "../../lib/utils";
 
 /**
  * Two states, not three. A "system" option is honoured on first load (see
  * themeBootstrapScript) but choosing manually is a definite choice, and a
  * three-way control costs more attention than it returns here.
+ *
+ * Rendered as a `.sideb` because the rail is the only chrome the design has.
  */
 export function ThemeToggle({ className }: { className?: string }) {
 	const [theme, setTheme] = useState<ResolvedTheme | null>(null);
@@ -32,20 +34,21 @@ export function ThemeToggle({ className }: { className?: string }) {
 	// flips after hydration.
 	if (!theme) return <span className={className} aria-hidden />;
 
+	const label = theme === "dark" ? "Switch to light" : "Switch to dark";
+
 	return (
-		<Button
-			variant="ghost"
-			size="icon-lg"
+		<button
+			type="button"
 			onClick={toggle}
-			className={className}
-			title={theme === "dark" ? "Switch to light" : "Switch to dark"}
-			aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}
+			className={cn("sideb", className)}
+			title={label}
+			aria-label={label}
 		>
 			{theme === "dark" ? (
-				<Sun className="size-4" />
+				<Sun className="size-3.5" />
 			) : (
-				<Moon className="size-4" />
+				<Moon className="size-3.5" />
 			)}
-		</Button>
+		</button>
 	);
 }

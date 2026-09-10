@@ -48,7 +48,10 @@ export function PdfPageView({
 				const natural = page.getViewport({ scale: 1 });
 				const scale = width / natural.width;
 				const viewport = page.getViewport({ scale });
-				const cssHeight = Math.round(viewport.height);
+				// Kept fractional: the column width is half of an odd number as often
+				// as not, and rounding here leaves a hairline of the gutter showing
+				// down the edge of a page that is meant to be full-bleed.
+				const cssHeight = viewport.height;
 
 				setHeight(cssHeight);
 				onAspectRatioRef.current?.(pageNumber, natural.height / natural.width);
@@ -56,7 +59,7 @@ export function PdfPageView({
 				const ratio = window.devicePixelRatio || 1;
 				canvas.width = Math.floor(viewport.width * ratio);
 				canvas.height = Math.floor(viewport.height * ratio);
-				canvas.style.width = `${Math.round(viewport.width)}px`;
+				canvas.style.width = `${viewport.width}px`;
 				canvas.style.height = `${cssHeight}px`;
 
 				const context = canvas.getContext("2d", { alpha: false });
@@ -73,7 +76,7 @@ export function PdfPageView({
 				if (container) {
 					container.replaceChildren();
 					container.style.setProperty("--total-scale-factor", String(scale));
-					container.style.width = `${Math.round(viewport.width)}px`;
+					container.style.width = `${viewport.width}px`;
 					container.style.height = `${cssHeight}px`;
 
 					const { TextLayer } = await getPdfjs();
@@ -119,11 +122,13 @@ export function PdfPageView({
 			*/}
 			<div ref={textLayerRef} className="pdf-text-layer" />
 			{failed && (
+				/* On the sheet, not on the page: this text sits on white paper in
+				   both skins, so it cannot take its colour from the skin. */
 				<div className="absolute inset-0 grid place-content-center gap-1 p-6 text-center">
-					<p className="text-ui font-medium text-ink">
+					<p className="text-ui font-medium text-on-sheet">
 						Page {pageNumber} did not render
 					</p>
-					<p className="text-tiny text-ink-2">
+					<p className="text-tiny text-on-sheet-2">
 						The page data may be damaged. Other pages are unaffected.
 					</p>
 				</div>

@@ -258,13 +258,13 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 	const isBusy = busyMessage !== null;
 
 	return (
-		<div className="min-h-dvh bg-desk text-ink">
-			<header className="border-b border-rule bg-surface">
+		<div className="min-h-dvh bg-paper text-ink">
+			<header className="border-b border-rule bg-rail">
 				<div className="mx-auto flex h-13 max-w-5xl items-center justify-between gap-4 px-6">
 					<span className="text-ui font-semibold tracking-[-0.01em]">
 						Parallel PDF Reader
 					</span>
-					<ThemeToggle />
+					<ThemeToggle className="w-auto px-2" />
 				</div>
 			</header>
 
@@ -274,7 +274,7 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 				  writing next to it. Nothing else competes with the drop target.
 				*/}
 				<div className="max-w-xl">
-					<h1 className="font-serif text-[1.75rem] leading-[1.25] tracking-[-0.015em] text-ink">
+					<h1 className="text-[1.75rem] font-semibold leading-[1.25] tracking-[-0.015em] text-ink">
 						Read a page. Write about that page.
 					</h1>
 					<p className="mt-3 max-w-md text-ui leading-relaxed text-ink-2">
@@ -286,8 +286,8 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 				{/* biome-ignore lint/a11y/noStaticElementInteractions: a drop target has no ARIA role; the same action is reachable from the two buttons inside it. */}
 				<div
 					className={cn(
-						"mt-8 rounded-panel border border-dashed p-1 transition-colors",
-						isDragOver ? "border-quill bg-quill-soft" : "border-rule-strong",
+						"mt-8 rounded-control border border-dashed p-1 transition-colors",
+						isDragOver ? "border-ink bg-tint" : "border-rule-strong",
 					)}
 					onDragOver={(event) => {
 						event.preventDefault();
@@ -301,8 +301,8 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 						if (file) addDocument(file);
 					}}
 				>
-					<div className="flex flex-col items-center gap-4 rounded-[calc(var(--radius-panel)-2px)] bg-surface px-6 py-9 text-center">
-						<span className="flex size-10 items-center justify-center rounded-control bg-quill-soft text-quill">
+					<div className="flex flex-col items-center gap-4 rounded-chip bg-rail px-6 py-9 text-center">
+						<span className="flex size-10 items-center justify-center rounded-control bg-tint text-ink-2">
 							<Upload className="size-4.5" />
 						</span>
 						<div>
@@ -324,7 +324,7 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 								Choose a PDF
 							</Button>
 							<Button onClick={addDemoDocument} disabled={isBusy}>
-								<Sparkles className="size-3.5 text-marker-ink" />
+								<Sparkles className="size-3.5 text-accent" />
 								Try the sample paper
 							</Button>
 						</div>
@@ -344,8 +344,8 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 
 				<div aria-live="polite" className="mt-4 empty:mt-0">
 					{busyMessage && (
-						<p className="flex items-center gap-2 rounded-control border border-rule bg-surface px-3 py-2 text-tiny text-ink-2">
-							<Loader2 className="size-3.5 animate-spin text-quill" />
+						<p className="flex items-center gap-2 rounded-control border border-rule-strong bg-rail px-3 py-2 text-tiny text-ink-2">
+							<Loader2 className="size-3.5 animate-spin text-ink-2" />
 							{busyMessage}
 						</p>
 					)}
@@ -367,14 +367,14 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 					<div className="flex items-baseline justify-between border-b border-rule pb-3">
 						<h2 className="text-ui font-semibold text-ink">Your documents</h2>
 						{documents.length > 0 && (
-							<span className="text-micro tabular-nums text-ink-3">
+							<span className="text-micro tabular-nums text-ink-2">
 								{documents.length}
 							</span>
 						)}
 					</div>
 
 					{isLoading ? (
-						<p className="flex items-center gap-2 py-10 text-tiny text-ink-3">
+						<p className="flex items-center gap-2 py-10 text-tiny text-ink-2">
 							<Loader2 className="size-3.5 animate-spin" />
 							Opening the local library
 						</p>
@@ -407,7 +407,7 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 											onClick={() => onSelectDocument(doc.id)}
 											className="flex min-w-0 flex-1 items-center gap-4 text-left"
 										>
-											<span className="sheet flex h-14 w-[2.75rem] shrink-0 items-center justify-center overflow-hidden">
+											<span className="sheet flex h-14 w-[2.75rem] shrink-0 items-center justify-center overflow-hidden rounded-chip border border-rule-strong">
 												{doc.thumbnailDataUrl ? (
 													<img
 														src={doc.thumbnailDataUrl}
@@ -415,15 +415,15 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 														className="size-full object-cover object-top"
 													/>
 												) : (
-													<FileText className="size-4 text-ink-3" />
+													<FileText className="size-4 text-ink-faint" />
 												)}
 											</span>
 
 											<span className="min-w-0 flex-1">
-												<span className="block truncate text-ui font-medium text-ink group-hover:text-quill">
+												<span className="block truncate text-ui font-medium text-ink group-hover:underline">
 													{doc.name}
 												</span>
-												<span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-micro text-ink-3">
+												<span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-micro text-ink-2">
 													<span className="tabular-nums">
 														{doc.pageCount}{" "}
 														{doc.pageCount === 1 ? "page" : "pages"}
@@ -438,18 +438,18 @@ export function DocumentOverview({ onSelectDocument }: DocumentOverviewProps) {
 											<span className="hidden w-32 shrink-0 sm:block">
 												{notes > 0 ? (
 													<>
-														<span className="block text-micro tabular-nums text-marker-ink">
+														<span className="block text-micro tabular-nums text-ink-2">
 															{notes} of {doc.pageCount} annotated
 														</span>
-														<span className="mt-1 block h-1 overflow-hidden rounded-full bg-surface-3">
+														<span className="mt-1 block h-1 overflow-hidden rounded-full bg-tint-strong">
 															<span
-																className="block h-full rounded-full bg-marker"
+																className="block h-full rounded-full bg-accent"
 																style={{ width: `${progress}%` }}
 															/>
 														</span>
 													</>
 												) : (
-													<span className="block text-micro text-ink-3">
+													<span className="block text-micro text-ink-faint">
 														No notes yet
 													</span>
 												)}

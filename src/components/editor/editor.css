@@ -1,10 +1,10 @@
 /*
-  Note prose.
+  Note prose, measured off `PDF Notes v3.dc.html`.
 
-  Notes are read far more often than they are written, so the note body is set
-  in Literata — a face designed for long-form screen reading — while every
-  control around it stays in the chrome sans. The measure is capped so a wide
-  split ratio cannot produce 140-character lines.
+  15px on 1.75 in the body face, 13px bottom margins, a 19px list indent, one
+  heading weight, and terracotta inline code on a warm tint. There is no card
+  around this: the note is text on the page, so the block has no padding of its
+  own beyond what the column already gives it.
 */
 
 .note-surface {
@@ -15,56 +15,63 @@
 
 .note-prose {
 	flex: 1;
-	max-width: 68ch;
-	padding: 1.15rem 1.25rem;
-	font-family: var(--font-serif);
-	font-size: 0.9375rem;
-	font-optical-sizing: auto;
-	line-height: 1.7;
+	font-family: var(--font-sans);
+	font-size: var(--text-note);
+	line-height: 1.75;
 	color: var(--ink);
 	outline: none;
 	overflow-wrap: break-word;
 }
 
 .note-prose > * + * {
-	margin-top: 0.7em;
+	margin-top: 13px;
 }
 
-.note-prose p.is-editor-empty:first-child::before {
+.note-prose p {
+	margin: 0;
+}
+
+/*
+  The design's two hints: "Write a note…" on an empty note, "Type / for
+  commands" on an empty line inside a written one. The 1.5px bar the design
+  draws in front of the second is the text caret, which the browser supplies.
+*/
+.note-prose p.is-empty::before {
 	content: attr(data-placeholder);
 	float: left;
 	height: 0;
 	pointer-events: none;
-	color: var(--ink-3);
-	font-family: var(--font-sans);
-	font-size: 0.8125rem;
+	color: var(--ink-faint);
 }
 
-/* Headings sit in the chrome face: they label the note, they are not prose. */
+/*
+  The design shows exactly one heading tier — 15.5px at 600, barely above the
+  body. Three levels still have to be distinguishable, so h1 and h2 step up
+  from it rather than the design's tier being the largest.
+*/
 .note-prose h1,
 .note-prose h2,
 .note-prose h3 {
 	font-family: var(--font-sans);
 	font-weight: 600;
-	letter-spacing: -0.011em;
-	line-height: 1.3;
+	line-height: 1.35;
 	color: var(--ink);
+	margin-bottom: 9px;
 }
 
 .note-prose h1 {
-	margin-top: 1.3em;
-	font-size: 1.3125rem;
+	margin-top: 1.5em;
+	font-size: 1.25rem;
 }
 
 .note-prose h2 {
-	margin-top: 1.25em;
+	margin-top: 1.4em;
 	font-size: 1.0625rem;
 }
 
 .note-prose h3 {
-	margin-top: 1.15em;
-	font-size: 0.9375rem;
-	color: var(--ink-2);
+	margin-top: 1.3em;
+	font-size: 0.96875rem; /* 15.5px — the design's heading */
 }
 
 .note-prose h1:first-child,
@@ -75,7 +82,7 @@
 
 .note-prose ul,
 .note-prose ol {
-	padding-left: 1.35rem;
+	padding-left: 19px;
 }
 
 .note-prose ul {
@@ -87,7 +94,11 @@
 }
 
 .note-prose li::marker {
-	color: var(--ink-3);
+	color: var(--ink-faint);
+}
+
+.note-prose li {
+	line-height: 1.7;
 }
 
 .note-prose li > * + * {
@@ -95,18 +106,15 @@
 }
 
 .note-prose li + li {
-	margin-top: 0.2em;
+	margin-top: 3px;
 }
 
-/*
-  A quote in a reading note is nearly always an excerpt from the page on the
-  left, so it is marked with the highlighter rather than the accent.
-*/
+/* The design's quote: a 3px rule in the text colour, 14px of indent. */
 .note-prose blockquote {
 	margin-inline: 0;
-	border-left: 2px solid var(--marker);
-	padding: 0.15rem 0 0.15rem 0.9rem;
-	color: var(--ink-2);
+	border-left: 3px solid var(--ink);
+	padding: 0 0 0 14px;
+	color: var(--ink);
 }
 
 .note-prose blockquote p {
@@ -118,15 +126,15 @@
 }
 
 .note-prose a {
-	color: var(--quill);
+	color: var(--accent);
 	text-decoration: underline;
-	text-decoration-color: color-mix(in oklab, var(--quill) 40%, transparent);
+	text-decoration-color: color-mix(in oklab, var(--accent) 40%, transparent);
 	text-underline-offset: 2px;
 	cursor: pointer;
 }
 
 .note-prose a:hover {
-	text-decoration-color: var(--quill);
+	text-decoration-color: var(--accent);
 }
 
 .note-prose mark {
@@ -137,19 +145,18 @@
 	box-decoration-break: clone;
 }
 
+/* The one chromatic element in the whole design. */
 .note-prose code {
 	font-family: var(--font-mono);
-	font-size: 0.8125em;
-	background: var(--surface-2);
-	border: 1px solid var(--rule);
-	border-radius: 4px;
-	padding: 0.1em 0.32em;
-	color: var(--ink);
+	font-size: var(--text-ui);
+	background: var(--code-bg);
+	border-radius: var(--radius-chip);
+	padding: 1px 5px;
+	color: var(--accent);
 }
 
 .note-prose pre {
-	background: var(--surface-2);
-	border: 1px solid var(--rule);
+	background: var(--code-bg);
 	border-radius: var(--radius-control);
 	padding: 0.75rem 0.9rem;
 	overflow-x: auto;
@@ -161,9 +168,9 @@
 
 .note-prose pre code {
 	background: none;
-	border: 0;
 	padding: 0;
 	font-size: inherit;
+	color: var(--ink);
 }
 
 .note-prose hr {
@@ -222,8 +229,8 @@
 }
 
 .note-prose input[type="checkbox"]:checked {
-	background: var(--quill);
-	border-color: var(--quill);
+	background: var(--accent);
+	border-color: var(--accent);
 }
 
 .note-prose input[type="checkbox"]:checked::after {
@@ -231,7 +238,7 @@
 }
 
 .note-prose ul[data-type="taskList"] li[data-checked="true"] > div {
-	color: var(--ink-3);
+	color: var(--ink-faint);
 	text-decoration: line-through;
 	text-decoration-color: var(--rule-strong);
 }
@@ -260,7 +267,7 @@
 }
 
 .note-prose th {
-	background: var(--surface-2);
+	background: var(--tint);
 	font-weight: 600;
 	text-align: left;
 }
@@ -276,7 +283,7 @@
 	inset: 0;
 	z-index: 2;
 	pointer-events: none;
-	background: color-mix(in oklab, var(--quill) 14%, transparent);
+	background: color-mix(in oklab, var(--accent) 14%, transparent);
 }
 
 .note-prose .column-resize-handle {
@@ -286,7 +293,7 @@
 	bottom: -1px;
 	z-index: 20;
 	width: 3px;
-	background: var(--quill);
+	background: var(--accent);
 	pointer-events: none;
 }
 
@@ -302,7 +309,7 @@
 }
 
 .note-prose .tiptap-mathematics-render--editable:hover {
-	background: var(--quill-soft);
+	background: var(--tint);
 }
 
 .note-prose [data-type="block-math"] {
@@ -323,7 +330,7 @@
 
 .note-prose img.ProseMirror-selectednode,
 .note-prose .ProseMirror-selectednode {
-	outline: 2px solid var(--quill);
+	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 	border-radius: 3px;
 }

@@ -3,10 +3,10 @@ export type ResolvedTheme = "light" | "dark";
 
 export const THEME_STORAGE_KEY = "ppr.theme";
 
-/** Browser chrome tint, kept in step with `--desk`. */
+/** Browser chrome tint, kept in step with `--rail`. */
 export const BROWSER_CHROME_COLOR: Record<ResolvedTheme, string> = {
-	light: "#e8e8ef",
-	dark: "#101117",
+	light: "#f7f6f3",
+	dark: "#242320",
 };
 
 /**

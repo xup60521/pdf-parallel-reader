@@ -95,8 +95,8 @@ function AppIndexPage() {
 
 	if (!isClient) {
 		return (
-			<div className="grid min-h-dvh place-content-center bg-desk">
-				<Loader2 className="size-5 animate-spin text-ink-3" />
+			<div className="grid min-h-dvh place-content-center bg-paper">
+				<Loader2 className="size-5 animate-spin text-ink-faint" />
 			</div>
 		);
 	}
@@ -105,8 +105,8 @@ function AppIndexPage() {
 	if (selectedDocId) {
 		if (isLoadingReader) {
 			return (
-				<div className="grid min-h-dvh place-content-center justify-items-center gap-3 bg-desk">
-					<Loader2 className="size-5 animate-spin text-quill" />
+				<div className="grid min-h-dvh place-content-center justify-items-center gap-3 bg-paper">
+					<Loader2 className="size-5 animate-spin text-ink-2" />
 					<p className="text-ui text-ink-2">Opening the document</p>
 				</div>
 			);
@@ -114,8 +114,8 @@ function AppIndexPage() {
 
 		if (loadError || !activeDocMeta || !activePdfDoc) {
 			return (
-				<div className="grid min-h-dvh place-content-center bg-desk p-6">
-					<div className="max-w-sm rounded-panel border border-rule bg-surface p-6">
+				<div className="grid min-h-dvh place-content-center bg-paper p-6">
+					<div className="max-w-sm rounded-control border border-rule-strong bg-surface p-6">
 						<h1 className="text-ui font-semibold text-ink">
 							{loadError ?? "That document is not in this browser"}
 						</h1>
