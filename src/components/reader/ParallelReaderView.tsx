@@ -27,11 +27,10 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
 
 /*
-  The design pads its page column 36px on every side. The owner asked for the
-  page borderless and fully expanded, so the horizontal padding is dropped and
-  the page fills its column edge to edge; the vertical rhythm stays.
+  Keep the fitted page slightly inset from the reading column. At explicit
+  zooms the same inset remains the stable edge around the page band.
 */
-const PDF_PADDING = 0;
+const PDF_PADDING = 16;
 const ROW_TOP = 36;
 const NOTE_PADDING = 40;
 /** How much of the reading area the page column may take, as a fraction. */
@@ -401,8 +400,8 @@ export function ParallelReaderView({
 	const isMeasured = availableWidth > 0;
 	const isStacked = isMeasured && availableWidth < STACK_BELOW;
 
-	// Two equal columns, exactly as the design fixes them. The page fits the
-	// column minus its 36px padding; zoom above 100% overflows that cell only.
+	// Two equal columns, exactly as the design fixes them. At 100% the page fits
+	// the column minus its small inset; zoom above 100% overflows that cell only.
 	// Fractional on purpose: an odd content width splits into two half-pixel
 	// columns, and rounding the page down leaves a sliver of gutter beside it.
 	const pdfCellWidth = isStacked ? availableWidth : availableWidth * split;
