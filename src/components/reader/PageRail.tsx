@@ -1,5 +1,5 @@
-import { ArrowLeft, Minus, Plus } from "lucide-react";
-import { type RefObject, useEffect, useRef } from "react";
+import { ArrowLeft, Download, Maximize2, Minus, Plus } from "lucide-react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "../ui/ThemeToggle";
 
 interface PageRailProps {
@@ -14,8 +14,8 @@ interface PageRailProps {
 	onSelect: (pageNumber: number) => void;
 	onZoomIn: () => void;
 	onZoomOut: () => void;
+	onZoomChange: (percent: number) => void;
 	onFit: () => void;
-	onCopy: () => void;
 	onExport: () => void;
 	onBack: () => void;
 }
@@ -39,12 +39,22 @@ export function PageRail({
 	onSelect,
 	onZoomIn,
 	onZoomOut,
+	onZoomChange,
 	onFit,
-	onCopy,
 	onExport,
 	onBack,
 }: PageRailProps) {
 	const listRef = useRef<HTMLOListElement>(null);
+	const [zoomDraft, setZoomDraft] = useState(`${zoomPercent}%`);
+
+	useEffect(() => setZoomDraft(`${zoomPercent}%`), [zoomPercent]);
+
+	const commitZoom = () => {
+		const normalizedValue = zoomDraft.replace("%", "").trim();
+		const value = Number(normalizedValue);
+		if (normalizedValue && Number.isFinite(value)) onZoomChange(value);
+		else setZoomDraft(`${zoomPercent}%`);
+	};
 
 	// Follow the reader. `nearest` is a no-op while the current page is already
 	// visible, so scrolling the rail by hand is not fought for as long as the
@@ -70,10 +80,6 @@ export function PageRail({
 					<ArrowLeft className="size-3" />
 				</button>
 				<ThemeToggle />
-			</div>
-
-			<div className="mb-1.5 mt-1 border-b border-rule pb-1.5 text-center text-micro tabular-nums text-ink-2">
-				{pageCount} pp
 			</div>
 
 			<ol
@@ -116,9 +122,25 @@ export function PageRail({
 				>
 					<Plus className="size-3" />
 				</button>
-				<span className="py-0.5 text-center text-micro tabular-nums text-ink-2">
-					{zoomPercent}%
-				</span>
+				<label className="block" title="Enter a zoom percentage">
+					<span className="sr-only">Zoom percentage</span>
+					<input
+						type="text"
+						inputMode="decimal"
+						value={zoomDraft}
+						onChange={(event) => setZoomDraft(event.target.value)}
+						onBlur={commitZoom}
+						onKeyDown={(event) => {
+							if (event.key === "Enter") event.currentTarget.blur();
+							if (event.key === "Escape") {
+								setZoomDraft(`${zoomPercent}%`);
+								event.currentTarget.blur();
+							}
+						}}
+						aria-label="Zoom percentage"
+						className="h-[22px] w-full rounded-chip border border-transparent bg-transparent px-0.5 text-center text-micro tabular-nums text-ink-2 outline-none hover:bg-tint focus:border-rule-strong focus:bg-paper"
+					/>
+				</label>
 				<button
 					type="button"
 					className="sideb"
@@ -134,25 +156,19 @@ export function PageRail({
 					className="sideb mt-1"
 					onClick={onFit}
 					aria-pressed={isFitted}
-					title="Fit the page to its column, and keep it fitted as the panels resize"
+					title="Fit page to panel"
+					aria-label="Fit page to panel"
 				>
-					Fit
-				</button>
-				<button
-					type="button"
-					className="sideb mt-1"
-					onClick={onCopy}
-					title="Copy every note as markdown"
-				>
-					Copy
+					<Maximize2 className="size-3" />
 				</button>
 				<button
 					type="button"
 					className="sideb mt-1"
 					onClick={onExport}
-					title="Download every note as markdown"
+					title="Export all notes as Markdown"
+					aria-label="Export all notes as Markdown"
 				>
-					Export
+					<Download className="size-3" />
 				</button>
 			</div>
 		</nav>
