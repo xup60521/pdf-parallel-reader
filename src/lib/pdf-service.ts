@@ -2,6 +2,10 @@ import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 let pdfjsLibPromise: Promise<typeof import("pdfjs-dist")> | null = null;
 
+function pdfjsAssetUrl(version: string, asset: string) {
+	return `https://cdn.jsdelivr.net/npm/pdfjs-dist@${version}/${asset}`;
+}
+
 export async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
 	if (typeof window === "undefined") {
 		throw new Error("PDF.js can only be loaded in a browser environment");
@@ -9,9 +13,14 @@ export async function getPdfjs(): Promise<typeof import("pdfjs-dist")> {
 
 	if (!pdfjsLibPromise) {
 		pdfjsLibPromise = import("pdfjs-dist").then((pdfjs) => {
-			// Configure worker source
+			// Keep the worker and auxiliary assets on the same PDF.js build. A
+			// mismatched worker or missing fallback font data can produce a page that
+			// loads successfully but paints only some glyphs.
 			if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-				pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+				pdfjs.GlobalWorkerOptions.workerSrc = pdfjsAssetUrl(
+					pdfjs.version,
+					"build/pdf.worker.min.mjs",
+				);
 			}
 			return pdfjs;
 		});
@@ -26,8 +35,11 @@ export async function loadPdfDocument(data: ArrayBuffer) {
 	const copy = data.slice(0);
 	const loadingTask = pdfjs.getDocument({
 		data: copy,
-		cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/cmaps/`,
+		cMapUrl: pdfjsAssetUrl(pdfjs.version, "cmaps/"),
 		cMapPacked: true,
+		standardFontDataUrl: pdfjsAssetUrl(pdfjs.version, "standard_fonts/"),
+		wasmUrl: pdfjsAssetUrl(pdfjs.version, "wasm/"),
+		iccUrl: pdfjsAssetUrl(pdfjs.version, "iccs/"),
 	});
 	return loadingTask.promise;
 }
