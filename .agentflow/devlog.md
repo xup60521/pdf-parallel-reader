@@ -4,19 +4,19 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: 298c743 — CommonJS marker for the bundled Agentflow scripts, pushed to origin/main.
+Current commit: ba9b0e9 — slimmer rail, zoom-independent split, and one shared page scrollbar; local implementation is ready for record closeout and push.
 
-Tests/scenarios: `bun run check` clean over 30 files; `bunx tsc --noEmit` exit 0. Targeted cross-check PASS on Outcome, Minimality, Conformance, and aggregate Verdict for 298c743; host gate PASS.
+Tests/scenarios: `bun run check` clean over 30 files; `bunx tsc --noEmit` exit 0; `bun run build` succeeded. Live browser journey covered nine zoom steps, divider pointer/keyboard behavior, zoom-independent resizing, Fit recovery, shared horizontal panning, sticky pinning, editor focus, IndexedDB persistence, dark mode, and export. Full cross-check PASS on Outcome, Minimality, Conformance, and aggregate Verdict for ba9b0e9; host gate PASS.
 
-Configuration: ag.json — schema v7; validated for claude this round.
+Configuration: ag.json — schema v7; validated for codex this round.
 
-Proven: A-002 results stand — one token layer at WCAG AA in both skins, pages fit their column at any zoom, sticky page pin, byte-exact Markdown round-trip, row windowing, flash-free dark mode. New: the Agentflow scripts run under plain `node` in this ESM project.
+Proven: The PDF Notes v3 visual rebuild is complete: warm monochrome tokens, 48px rail, borderless full-width PDF and note bands, click-anywhere editor focus, centred PDF, draggable 20–80% divider, explicit zoom independent of resizing, Fit recovery, one viewport-bottom horizontal PDF scrollbar, and visible full-page vertical scrolling. Earlier sticky pin, windowing, Markdown round-trip, dark mode, and local-first persistence remain intact.
 
-Open: **A-003 is blocked** — the Claude Design file `PDF Notes v3.dc.html` (project 018d4342-8ec0-454e-8a6e-03efb6472349) is unreachable; DesignSync needs an interactive `/design-login` and the share URL returns 403. The requested UI refactor has not started. Carried from A-002: page-1-only aspect sampling, current-page observer binding rows once at mount, `window.prompt` as the link dialog, no max width on the reading area, unused `tw-animate-css`, and thin visual verification. 72 files under `.agents/skills/agentflow/` are untracked and surface as a change every round.
+Open: The preview browser's `ResizeObserver` does not fire, so the final narrow stacked branch was source-inspected rather than re-exercised after the divider change. Carried from A-002: page-1-only aspect sampling, `window.prompt` as the link dialog, and unused `tw-animate-css`. The intentionally full-width reading area supersedes the earlier max-width proposal. 72 files under `.agents/skills/agentflow/` remain untracked and surface as changes every round.
 
-Next: owner supplies the design — `/design-login` then `continue`, or the file saved into the repo — then run A-004 as the UI refactor.
+Next: await the owner's next Ask.
 
-Artifacts: `.agentflow/artifacts/A-002-ui-overhaul/design.md`, `.agentflow/cross-check-facts.json`, `.agentflow/A-003-cross-check-brief.md`, `.agentflow/A-003-cross-check-report.md`, and dispatch facts; A-001 and A-002 equivalents retained.
+Artifacts: `.agentflow/artifacts/A-004-design-refactor/design.md`, `tracker.md`, and `PDF Notes v3.dc.html`; `.agentflow/cross-check-facts.json`; `.agentflow/A-004-cross-check-brief.md`, report, and dispatch facts; A-001 through A-003 equivalents retained.
 
 Archived eras: none.
 
@@ -529,6 +529,21 @@ If the new design settles either one, I will follow the design over those defaul
 
 + login success. it should work now
 
++ retry
+also, the pdf reader should be borderless. and make sure the width is fully expended
+
++ 1. make sure to test pdf zoom-in zoom-out pdf
+2. clicking the right panel everywhere should trigger the editor, as previously mention that width should be full
+3. following 1., center the pdf horizontally
+4. the pdf-note panels should be resizable, rather then determined awkwardly by pdf zoom scale
+5. pdf horizonal scroll bar should be more visible
+6. the design choice is full-page vertical scroll. same as 5. that scroll bar should be more visible. Potentially use shadcn scrollarea component or something else
+
++ 1. the sidebar is tooooo fat. I don't like it
+2. I feel like resizing the panel should not affect pdf size. The only exception is when the pdf width fit to panel width.
+3. What I mean pdf horizontal scrollbar is, actually, the whole container one. Current one is per page and is not visible when the bottom of that page isn't in the viewport
+[attached screenshot: a per-page horizontal scrollbar sitting at the bottom edge of one page, mid-viewport, beside a wide rail]
+
 ## [RUN-001] Event (during round A-004)
 
 - Route: direct. The owner authorized the design tool, so this round executes the A-003 request.
@@ -549,3 +564,126 @@ If the new design settles either one, I will follow the design over those defaul
 - Standing assumption, stated because the owner left the A-003 questions unanswered: converge
   rather than replace — the design drives every visual decision, and proven behavior the mock
   cannot express (sticky pin, windowing, Markdown round-trip, dark mode) is kept and re-skinned.
+
+## [RUN-002] Event (during round A-004)
+
+- Plan commit `27cc945` froze the design record, the verbatim design source, and the tracker.
+- T-1..T-6 implemented and committed as `9733e91` — token layer, 48px-precursor 64px rail, the
+  three-column shell, the chrome-free note, the prose spec, and the sweep through every component.
+- Owner correction 2 ("borderless / width fully expended") folded in before that commit:
+  `PDF_PADDING` 0, `.sheet` with no border, and fractional width measurement so the page has no
+  sliver of gutter beside it.
+- Suite for `9733e91`: `bun run check` 30 files clean, `bunx tsc --noEmit` exit 0, `bun run build`
+  succeeded. Full external review `A-004-cross-check-1` returned Outcome/Minimality/Conformance
+  PASS with no findings.
+- Owner correction 3 arrived (six items) and superseded that review, so it is recorded but not
+  used as the completion gate.
+
+## [RUN-003] Event (during round A-004)
+
+- Owner correction 3, six items, committed as `47827b5`: zoom exercised across all nine steps,
+  the whole note column made clickable into the editor, the 560px measure dropped, the page
+  centred when it is narrower than its column, a draggable 20–80% divider added, and both
+  scrollbars redrawn at 15px with solid thumbs.
+- Two defects found and fixed while testing that set. The note track was `1fr`, whose minimum is
+  min-content, so the demo note's table forced the whole document sideways; it is now
+  `minmax(0,1fr)` as the design writes it. And the reading area was measured once before the
+  document scrollbar appeared, leaving the page a few pixels wider than its column;
+  `scrollbar-gutter: stable` reserves the gutter from the first layout.
+- Owner correction 4, three items, committed as `ba9b0e9`: the rail cut from 64px to 48px with
+  11px labels and no wrapping; an explicit zoom now freezes the column width it is measured
+  against, so dragging the divider no longer resizes the page while `Fit` restores tracking; and
+  the per-page horizontal scroller replaced by one scroller stuck to the foot of the window that
+  pans every page through a shared offset.
+- Environment limit found and recorded: `ResizeObserver` never fires in this preview browser — an
+  observer attached to an element that was then resized logged zero callbacks, including the
+  initial observation. The stacked layout therefore could not be re-verified after the divider
+  landed; it was verified live earlier in the round.
+
+## [RUN-004] Event (during round A-004)
+
+- Suite for the final commit `ba9b0e9`: `bun run check` — Biome checked 30 files, no fixes
+  applied. `bunx tsc --noEmit` — exit 0. `bun run build` — succeeded.
+- Live journey against the sample document, measured in the DOM: rail 48px; page cell and sheet
+  both 810px at x=48 with no border and no sliver; zoom correct across all nine steps with the
+  page centred below 100%; divider clamped at 20% and 80%, reset on double-click, 48% on
+  ArrowLeft with matching `aria-valuenow`; page frozen at 1316px while the cell moved 567 → 1215;
+  shared scrollbar 810px wide, flush with the window bottom, panning all three pages by exactly
+  300px; note dead-space click focusing the editor with a collapsed caret at the end; sticky pin
+  holding at 0; typing and renaming both persisted to IndexedDB; dark mode tokens correct; Export
+  producing the named blob.
+- `cross-check-plan.js` on the refreshed facts selected `full`.
+- Review `A-004-cross-check-2`: `claude-default` / `claude-opus-4-6` / high, completed, exit 0,
+  clone independent with no remotes and unchanged, 13609 report bytes.
+  Report: `.agentflow/A-004-cross-check-report.md`.
+- Verdict for `ba9b0e9`: Outcome PASS, Minimality PASS, Conformance PASS, aggregate Verdict PASS.
+  No findings.
+- Host gate: PASS. I read the report and its cited lines directly. Two accepted limits, both
+  already mine: the reviewer's sandbox blocked `bun`/`tsc`/`biome` so the suite evidence is the
+  coordinator's, and the stacked layout is confirmed by inspection rather than execution because
+  `ResizeObserver` does not fire in the preview browser. Neither is contradicted by the diff.
+
+# ← Reply / A-004
+
+2026-09-10 15:35 UTC+8 (Taipei) — OpenAI GPT-5.6 Sol, model id `gpt-5.6-sol`.
+
+## [SUMMARY]
+
+- Succeeded: rebuilt the reader to the authorised PDF Notes v3 design and applied all three follow-up corrections.
+- The reader is borderless and full width; the note panel fills its column and clicking its dead space focuses the editor.
+- The rail is now 48px, the PDF/note split is draggable, and resizing preserves explicit PDF zoom until `Fit` is selected.
+- The PDF stays centred when narrower than its pane; one visible, viewport-bottom horizontal scrollbar pans every page together.
+- Zoom, split resizing, shared scrolling, sticky pages, note editing, persistence, dark mode, and export were exercised in a live browser journey.
+- Final implementation commit `ba9b0e9`; complete suite passed; full independent review PASS; host gate PASS.
+
+## [FINAL REPORT]
+
+### Rebuild the UI from `PDF Notes v3.dc.html`
+
+**Succeeded.** After the design authorization became available, I retrieved the full design source and rebuilt the reader around its warm monochrome palette, compact control rail, continuous PDF/note bands, and chrome-free note editor while preserving the proven reader behavior.
+
+The implementation is split across three commits:
+
+- `9733e91` — the PDF Notes v3 visual rebuild.
+- `47827b5` — borderless full-width notes, click-anywhere editor focus, centred PDFs, resizable panels, and stronger scrollbars.
+- `ba9b0e9` — 48px rail, zoom-independent resizing, and one shared horizontal PDF scrollbar.
+
+### Borderless reader and fully expanded width
+
+**Succeeded.** The PDF sheet has no border or side gutter and fills the measured PDF pane at fit zoom. The note no longer has a 560px content cap; it expands across its panel minus the intended 40px internal padding. The note track uses `minmax(0,1fr)`, preventing wide Markdown content from forcing document-level horizontal overflow.
+
+### PDF zoom, centring, and resizable panels
+
+**Succeeded.** The live journey exercised the full nine-step zoom range. PDFs centre horizontally whenever they are narrower than the pane. The divider supports pointer dragging, keyboard arrows, Home/End bounds, and double-click reset, with a 20%–80% clamp and correct separator ARIA values.
+
+Explicit zoom now freezes the width it was measured against. Dragging the divider therefore does not resize the PDF; selecting `Fit` returns the PDF to pane-following behavior. In the measured journey, the sheet remained 1316px wide while its pane moved from 567px to 1215px.
+
+### Editor focus and shared scrolling
+
+**Succeeded.** Clicking unused space anywhere in the note panel focuses the editor and places a collapsed caret at the end, while clicks on controls, links, inputs, and existing editor content keep their normal behavior.
+
+The per-page horizontal scrollers were replaced by one scrollbar spanning the whole PDF pane and sticking to the bottom of the viewport. Moving it by 300px shifted all three tested pages by exactly 300px. Both horizontal and full-page vertical scrollbars use a 15px track and stronger solid thumbs for visibility.
+
+### Verification
+
+- `bun run check` — Biome checked 30 files, no fixes required.
+- `bunx tsc --noEmit` — exit 0.
+- `bun run build` — succeeded.
+- Live browser journey — rail 48px; sheet and PDF pane both 810px with no border/sliver; all zoom steps correct; divider behavior correct; zoom stayed fixed through resizing; Fit restored pane tracking; shared scrollbar panned every page; note dead-space focus worked; sticky pin held; note and title changes persisted to IndexedDB; dark mode tokens rendered correctly; export produced the expected blob.
+- Full independent review of `ba9b0e9` — Outcome PASS, Minimality PASS, Conformance PASS, aggregate Verdict PASS, no findings.
+- Host gate: PASS. I inspected the review and its cited implementation evidence directly.
+
+One verification limit remains: the preview browser's `ResizeObserver` produced no callbacks, even in an isolated probe, so the narrow stacked layout could not be re-exercised after the divider change. It was verified earlier in the round and the final guarded stacked branch passed source inspection. This does not affect the requested desktop behavior.
+
+Cross-check review: `.agentflow/A-004-cross-check-report.md`
+Cross-check implementation: ba9b0e9a55ea01871a2adb3dfa0209c3f1d6a6a9
+
+## Questions (batched — each with a suggested default)
+
+- None.
+
+---
+
+# → Ask / A-005
+
++
