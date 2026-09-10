@@ -1,0 +1,12 @@
+{
+  "changed_files": [
+    "src/lib/pdf-service.ts",
+    "src/components/pdf/PdfPageView.tsx"
+  ],
+  "changed_lines": 46,
+  "behavior_change": true,
+  "trust_boundary": false,
+  "broad_change": false,
+  "consequential_change": false,
+  "owner_control": "default"
+}
