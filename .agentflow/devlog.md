@@ -4,19 +4,19 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: 0aa8ea7 — implementation 6ce7e9b55101dd7ab46ec0895fed106e20a4f7d1 plus closeout records.
+Current commit: 7c3fe0f — UI, theme, and Markdown editor rebuild, pushed to origin/main.
 
-Tests/scenarios: `bun run check` passed; targeted cross-check PASS; host gate PASS.
+Tests/scenarios: `bunx tsc --noEmit` clean; `bun run check` clean over 30 files; `bun run build` succeeded; browser journey against the demo document; full cross-check PASS; host gate PASS.
 
-Configuration: ag.json — schema v7; validated for codex this round.
+Configuration: ag.json — schema v7; unchanged this round.
 
-Proven: Agentflow configuration and notebook initialized; exact `godev` input recorded; review evidence accepted.
+Proven: one token layer with every text tier at WCAG AA in both skins; pages fit their column at any zoom; the sticky page pin works for the first time; Markdown round-trips byte-exact across math, task lists, tables, and highlights; row windowing bounds live editors; dark mode reachable and flash-free.
 
-Open: none.
+Open: three non-blocking reviewer observations — page-1-only aspect sampling for placeholders, the current-page observer binding rows once at mount, and `window.prompt` as the remaining link dialog. Visual polish is under-verified because the preview browser dropped observer callbacks and most screenshots failed. The reading area has no max width. `tw-animate-css` is unused but still declared.
 
-Next: await the next owner Ask (A-002).
+Next: await the next owner Ask (A-003).
 
-Artifacts: `.agentflow/cross-check-facts.json`, `.agentflow/A-001-cross-check-brief.md`, `.agentflow/A-001-cross-check-report.md`, and dispatch facts.
+Artifacts: `.agentflow/artifacts/A-002-ui-overhaul/design.md`, `.agentflow/cross-check-facts.json`, `.agentflow/A-002-cross-check-brief.md`, `.agentflow/A-002-cross-check-report.md`, and dispatch facts.
 
 Archived eras: none.
 
@@ -167,3 +167,179 @@ Go freely in this round. continue until you think all you can do are done. I'm g
 - Added a stacked layout below 760px of content width with the spine turned on its side and the rail auto-collapsing; verified the row switches to `flex-col` with no overflow.
 - Removed five tokens and one CSS import that nothing referenced.
 - `bunx tsc --noEmit`, `bun run check`, and `bun run build` all pass.
+
+## [RUN-003] Event (during round A-002)
+
+- Committed the implementation unit as `7c3fe0f` and pushed it to `origin/main`; `HEAD..origin/main` was empty before the push, so it fast-forwarded cleanly.
+- Final gates on that commit: `bunx tsc --noEmit` clean, `bun run check` clean over 30 files, `bun run build` succeeded.
+- Contrast audit found `--ink-3` at 3.93:1 while carrying real content (page numbers, file metadata). Retuned to `#61667a` light and `#7f8499` dark; every text tier now clears AA on both the surface and the desk it sits on.
+- Owner then asked to finish quickly. The independent external cross-check was not dispatched; this is recorded as an open item rather than skipped silently, because the current Ask carries no `skip-review:` token.
+
+## [RUN-004] Event (during round A-002)
+
+- Cross-check plan: `full`, from frozen facts recording 31 changed files, 5495 changed lines, behavior change true, broad change true, consequential true.
+- Dispatched one external read-only review on the first attempt; worker exited 0 with `clone_changed=false` and an independent clone carrying no remotes.
+- Report: PASS on Verdict, Outcome, Minimality, and Conformance for commit `7c3fe0fed675825ae713ef00622656647a808b16`.
+- Independent host inspection confirmed the worker stamp, the exact reviewed commit, exactly four unformatted PASS verdict lines, and a single final `Self-check:` boundary with no content after it.
+- The reviewer confirmed three of the four adversarial claims outright and rated the fourth (debounced flush on unmount) plausible, noting that TipTap's deferred teardown is implementation-dependent rather than a documented guarantee, and that a `pagehide` flush may not finish its IndexedDB write. Both are accepted trade-offs, not defects.
+- Reviewer limitation recorded honestly: it could not rerun `bun`/`bunx` in its clone because of sandbox restrictions, so suite evidence is carried from the coordinator rather than independently reproduced.
+- Three non-blocking observations accepted as open items rather than fixed, because the closeout stop rule forbids restarting implementation review for changes that are not required: page-1-only aspect sampling for placeholders, the current-page observer binding rows once at mount, and `window.prompt` remaining as the link entry dialog.
+- Host gate: PASS.
+
+# ← Reply / A-002
+
+2026-09-10 08:27:31 +0800 — Claude / Opus 5 (1M context)
+
+## [SUMMARY]
+
+- Rebuilt the theme, the reader layout, and the Markdown editor. Commit `7c3fe0f`, pushed to `origin/main`.
+- The old build had three colliding visual languages and a `@layer base` rule that stopped the authored theme rendering at all; there is now one palette, and every text tier clears WCAG AA in both light and dark.
+- Read the contextboard editor and adopted its shape: slash menu, TipTap's own `BubbleMenu`, one shared extension factory, plus highlights, checklists, tables and KaTeX math.
+- Four defects were found by running the app, not by reading it, including one that silently destroyed every equation on save.
+- The sticky page pin your README advertised was never actually working; it works now.
+- `tsc`, `biome check`, and `bun run build` all pass; the independent external cross-check returned PASS on all four dimensions and the host gate is PASS.
+- Screenshot review was limited by the preview browser, so visual polish is less verified than structure.
+
+## [FINAL REPORT]
+
+### Task 1 — "The UI is TERRIBLE. Fix it, both the layout and the theme."
+
+Succeeded.
+
+**Why it looked the way it did.** `src/styles.css` carried two complete token systems at once: a
+hand-authored `--sea-ink`/`--lagoon` palette and an unused shadcn `oklch` set. A rule in
+`@layer base` set `body { background-color: var(--background) }`, which overrode the authored
+gradient, so the intended theme never rendered on any screen. Meanwhile every component hardcoded
+`stone-*` and `emerald-*` utilities and referenced neither system, so no token edit could have
+reached them. That is three visual languages on one screen, which is the thing you were seeing.
+
+**Theme.** One palette now — ink, paper, desk — with the shadcn aliases derived from it so a
+generated component lands in the right skin instead of starting a second system. The accent is a
+fountain-pen violet rather than the inherited teal, which came from a different product and encoded
+nothing about reading. Two typefaces with a real division of labour: Instrument Sans for all chrome,
+Literata (a face designed for long-form screen reading) for note prose. Note measure is capped at
+68ch so a wide split cannot produce 140-character lines. Dark mode existed in the tokens but nothing
+ever set the class; there is now a toggle plus an inline head bootstrap that runs before first paint,
+verified against the served HTML.
+
+**Layout.** Five structural changes:
+
+- One scroll pane replaces three hand-tuned sticky offsets (`top-0`, `top-[49px]`, `top-20`) that
+  were measured against content-derived header heights.
+- Pages render to the width of their column. Previously a page was sized from `viewport.width` at
+  the raw zoom, so it under-filled at 100% and broke the row horizontally past about 140%.
+- A thumbnail rail replaces the navigator that mounted one 24px button per page into a 260px
+  scroller.
+- Rows outside the viewport window hold their exact height but mount no canvas and no editor, so a
+  200-page PDF no longer builds 200 ProseMirror instances.
+- Below 760px of content width the pair stacks and the spine turns on its side.
+
+The one place the design raises its voice is the spine: the ruled gutter between a page and its
+note, carrying the page number and a mark when that page is annotated. It encodes the product's
+whole premise rather than decorating. Everything else stays quiet. I also removed the four-layer
+radial-gradient body background and the two decorative overlay grids — pure decoration fighting the
+content.
+
+### Task 2 — "Go check out contextboard/packages/editor for what the editor should be."
+
+Done. I read `createRichTextExtensions.ts`, the whole `slash/` directory, `EditorBubbleMenu.tsx`,
+`MarkdownPasteExtension.ts`, and `editor.css`, and adopted its shape:
+
+- A slash menu on `@tiptap/suggestion` + `@floating-ui/dom` with `flip` and `shift`, replacing nine
+  always-visible toolbar buttons **per page row** (180 buttons on a 20-page document).
+- TipTap's own `BubbleMenu`, replacing a hand-rolled positioner that used fixed `-120`/`-42` pixel
+  offsets with no flip or shift and clipped at container edges.
+- One shared extension factory so the editable surface cannot drift from any static one.
+- Its `looksLikeMarkdown` paste heuristic, extended with table detection.
+
+Added for this product specifically: highlights (the marker metaphor), checklists, tables, links,
+and KaTeX math — what you actually write while reading a paper. Serialization moved off the
+keystroke path onto the debounced save, which now flushes on unmount and `pagehide` instead of
+dropping the edit.
+
+### Defects found by running the app
+
+Each was reproduced before being fixed.
+
+1. **Every equation was silently destroyed on save.** `getHTML()` renders math as an empty
+   `<span data-latex>`, and Turndown replaces blank elements *before* custom rules run, so the math
+   rule never fired. Round-trip is now byte-exact — verified through the editor for inline math,
+   block math, checked and unchecked tasks, a GFM table, a highlight, and inline code.
+2. **The prefetch window did nothing.** `rootMargin` only grows the observer root; an intermediate
+   scrolling ancestor still clips. Observing against the window while rows live in an
+   `overflow-y-auto` pane reports every off-screen row as hidden no matter how large the margin.
+3. **Zoom above 100% was absorbed by flex shrink, and the sticky page had no travel.** The column
+   now stretches to the row height and the horizontal overflow lives on the sticky element itself.
+   This is the first time the "page pins while the note scrolls" behaviour in your README actually
+   works — verified with a 2258px note against a 1015px page held at a constant viewport top through
+   a 900px scroll.
+4. **React dedupes `theme-color` by name**, so the light variant never rendered.
+
+Also fixed: `--ink-3` sat at 3.93:1 while carrying page numbers and file metadata; retuned so every
+text tier clears AA. Screen readers can now read the PDF text layer (it was behind `aria-hidden`).
+`alert()`/`confirm()` replaced with in-UI states.
+
+### Verification
+
+- `bunx tsc --noEmit` clean, `bun run check` clean over 30 files, `bun run build` succeeded.
+- Browser journey at 1683x1052 against the demo document: 717px page in a 733px column with zero
+  document overflow; prose measure 591px; 104 selectable text-layer spans; slash menu 14 items in 5
+  groups; bubble menu 9 controls; dark mode resolves and persists; rail click drives spine, page
+  field, and rail highlight together; stacked mode confirmed below 760px.
+- Contrast checked arithmetically from the hex values, both skins.
+
+### Review
+
+Full external read-only review, first attempt, no retries.
+
+Cross-check review: .agentflow/A-002-cross-check-report.md
+Cross-check implementation: 7c3fe0fed675825ae713ef00622656647a808b16
+Host gate: PASS
+
+PASS on Verdict, Outcome, Minimality, and Conformance. The reviewer confirmed three of the four
+adversarial claims outright and rated the fourth — the debounced save flushing on unmount — as
+plausible rather than confirmed, on the grounds that TipTap's deferred teardown is
+implementation-dependent rather than a documented guarantee, and that a `pagehide` flush may not
+finish its IndexedDB write before the page is discarded. I accept both as trade-offs.
+
+One reviewer limitation worth stating plainly: it could not rerun `bun`/`bunx` inside its clone
+because of sandbox restrictions, so the suite evidence in its report is carried from mine rather
+than independently reproduced.
+
+It raised three non-blocking observations, which I have left as open items rather than fixing,
+because the closeout rule forbids reopening implementation review for changes the Ask does not
+require:
+
+- Placeholder heights sample page 1's aspect ratio only, so a document with mixed page sizes gets
+  slightly wrong placeholders until those pages render.
+- The current-page observer binds every row once at mount; correct today, fragile if rows ever
+  become lazily added.
+- `window.prompt` is still the link-entry dialog — the one browser dialog left after I removed
+  `alert()`/`confirm()` elsewhere.
+
+### What I did not finish
+
+- **Screenshot review was thin.** The preview browser stopped delivering `ResizeObserver` and
+  `IntersectionObserver` callbacks whenever its tab lost compositing, and most snapshot calls
+  failed. I got one usable screenshot and otherwise verified geometry, colour, and behaviour by
+  measuring the live DOM. Fine typography and visual balance are therefore less well checked than
+  the structure is.
+- `tw-animate-css` is now unused but still declared in `package.json`; I removed only the import.
+
+## Questions (batched — each with a suggested default)
+
+- Replace the `window.prompt` link dialog with an inline link editor like the reference package's
+  `LinkEditor`?
+- Suggested default: yes, next round; it is the last browser dialog in the app.
+- ans:
+
+- The reading area fills the full window width with no cap. On an ultra-wide monitor the two columns
+  get very wide even with the 68ch prose cap. Add a max width?
+- Suggested default: yes, cap the reading area at about 1800px and centre it.
+- ans:
+
+---
+
+# → Ask / A-003
+
++
