@@ -4,7 +4,7 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: `fix/pdf-panel-vertical-scroll` — A-008 gives the pinned PDF band its own vertical scroll; delivery is the PR from that branch.
+Current commit: main `421afab` holds the A-008 records; the implementation is `3fc72a0` on `fix/pdf-panel-vertical-scroll`, delivered as PR #4 (https://github.com/xup60521/pdf-parallel-reader/pull/4).
 
 Tests/scenarios: `tsc --noEmit` exit 0; `biome lint` clean on both changed paths; `vite build` succeeded and the emitted CSS carries `max-h-dvh`; `git show --check 3fc72a018b9c2c6462c390b74f256b5c17237d3f` passed. The repository has no test runner and no dev server was started.
 
