@@ -202,13 +202,12 @@ function PageRow({
 			pdfId={docId}
 			pageNumber={pageNumber}
 			initialMarkdown={initialMarkdown}
-			minHeight={isStacked ? 200 : Math.max(reservedHeight - 40, 160)}
+			minHeight={isStacked ? 200 : 160}
 			onContentChange={onNoteContentChange}
 		/>
 	) : (
-		// Same shape as a live note so the row keeps its height and the label
-		// does not appear only once the editor mounts.
-		<div style={{ height: isStacked ? 200 : reservedHeight }}>
+		// Keep the label in the same compact panel before the editor mounts.
+		<div style={{ height: isStacked ? 200 : 160 }}>
 			<div className="plabel mb-[11px] flex h-5 items-center">
 				Page {pageNumber}
 			</div>
@@ -245,6 +244,14 @@ function PageRow({
 			ref={rowRef}
 			data-page={pageNumber}
 			aria-label={`Page ${pageNumber}`}
+			// The row remains the page-sized boundary for both sticky panels; the
+			// note no longer has to create that space with an empty editor surface.
+			style={{
+				minHeight:
+					reservedHeight +
+					(isFirst ? ROW_TOP : 0) +
+					(isLast ? ROW_TOP : 18),
+			}}
 			// The split is a variable on the scroll container, so every row moves
 			// together when the divider is dragged.
 			// `minmax(0,1fr)` as the design writes it: without the 0 minimum the
@@ -270,7 +277,19 @@ function PageRow({
 					paddingBottom: isLast ? ROW_TOP : 18,
 				}}
 			>
-				<div className="sticky top-0">
+				{/*
+				  The pinned band is one viewport tall and carries its own vertical
+				  scroll, so a zoomed page is read inside it instead of by moving the
+				  document. That keeps an unfinished note where the writer left it, and
+				  it reaches the foot of a tall page at all: a sticky box taller than
+				  the scrollport never moves again once it pins, so without this the
+				  lower part of a zoomed page could not be brought into view.
+
+				  `overflow-x: clip` is restated here because a box that scrolls on one
+				  axis turns a `visible` sibling axis into `auto`, and the page column
+				  must not grow a second horizontal scrollbar beside the shared one.
+				*/}
+				<div className="pdf-scroll sticky top-0 max-h-dvh overflow-x-clip overflow-y-auto">
 					{/* Centred while the page fits its column; panned once it does not. */}
 					<div
 						className={cn(
@@ -284,12 +303,12 @@ function PageRow({
 				</div>
 			</div>
 
-			{/* The whole cell is the note: clicking anywhere in it puts the caret in
-			    the editor, so the note is as big a target as it looks. */}
+			{/* The whole cell is the note: it stays pinned while this PDF page pans,
+			    scrolls long notes internally, and forwards dead-space clicks to the editor. */}
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: this only forwards a click in dead space to the editor the cell already contains; the editor itself carries the textbox role. */}
 			<div
 				onMouseDown={focusNoteFromDeadSpace}
-				className="min-w-0"
+				className="sticky top-0 max-h-dvh min-w-0 self-start overflow-y-auto"
 				style={{
 					paddingInline: NOTE_PADDING,
 					paddingTop: isFirst ? ROW_TOP : 0,

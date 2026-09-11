@@ -247,6 +247,7 @@ body {
 
 .pdf-scroll::-webkit-scrollbar {
   height: 15px;
+  width: 15px;
 }
 
 .pdf-scroll::-webkit-scrollbar-track {
