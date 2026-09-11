@@ -1011,4 +1011,13 @@ At high zoom the note cell still reserves the full height of the page (`minHeigh
 
 # → Ask / A-009
 
-+
+godev
+When I actually use the app, the most annoying part is I sometimes need to zoom in pdf and scroll around, but the note panel scroll vertically as well, sometimes my unfinished-note leave the viewport, and I need to scroll back to take my note.
+You may use the previous browser to test the UX.
+
+## [RUN-001] Event (during round A-009)
+
+- Route: direct continuation of PR #4. The exact owner-reported behavior already has a small, reversible implementation on `fix/pdf-panel-vertical-scroll`; this round validates its browser UX rather than creating a duplicate change.
+- Baseline browser evidence on served `main`: the first PDF band is `sticky top-0`, 1,494 px tall in a 1,052 px viewport, with no vertical scroller. Scrolling the document from `scrollY=0` to `700` left the PDF pinned but moved the first note from `top=105` to `top=-595`, fully outside the viewport.
+- Browser constraint: the collaborative browser opened blank rather than retaining the prior tab, but an owner-started app is reachable on port 3000. No server or long-lived process was started.
+- Next work action: load the existing PR branch into that already-running app, repeat the same page/note measurements, and refine the fix only if the interaction remains wrong.
