@@ -270,7 +270,19 @@ function PageRow({
 					paddingBottom: isLast ? ROW_TOP : 18,
 				}}
 			>
-				<div className="sticky top-0">
+				{/*
+				  The pinned band is one viewport tall and carries its own vertical
+				  scroll, so a zoomed page is read inside it instead of by moving the
+				  document. That keeps an unfinished note where the writer left it, and
+				  it reaches the foot of a tall page at all: a sticky box taller than
+				  the scrollport never moves again once it pins, so without this the
+				  lower part of a zoomed page could not be brought into view.
+
+				  `overflow-x: clip` is restated here because a box that scrolls on one
+				  axis turns a `visible` sibling axis into `auto`, and the page column
+				  must not grow a second horizontal scrollbar beside the shared one.
+				*/}
+				<div className="pdf-scroll sticky top-0 max-h-dvh overflow-x-clip overflow-y-auto">
 					{/* Centred while the page fits its column; panned once it does not. */}
 					<div
 						className={cn(
