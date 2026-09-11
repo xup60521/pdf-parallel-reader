@@ -4,7 +4,7 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: baabf7e — A-007 documentation commit is pushed to origin/main; the final devlog and review records are being committed.
+Current commit: main (origin/main) — A-007 documentation and record closeout are committed and pushed.
 
 Tests/scenarios: `git show --check baabf7e888e10761b9f737b27de926ec8e266598` passed. No application suite was rerun for this documentation-only round; A-006 TypeScript, build, diff, and cross-check evidence remains recorded below.
 
