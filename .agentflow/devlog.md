@@ -4,19 +4,19 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: main `421afab` holds the A-008 records; the implementation is `3fc72a0` on `fix/pdf-panel-vertical-scroll`, delivered as PR #4 (https://github.com/xup60521/pdf-parallel-reader/pull/4).
+Current commit: main carries the A-009 browser verification records; implementation `3fc72a0` remains on `fix/pdf-panel-vertical-scroll` in PR #4 (https://github.com/xup60521/pdf-parallel-reader/pull/4).
 
-Tests/scenarios: `tsc --noEmit` exit 0; `biome lint` clean on both changed paths; `vite build` succeeded and the emitted CSS carries `max-h-dvh`; `git show --check 3fc72a018b9c2c6462c390b74f256b5c17237d3f` passed. The repository has no test runner and no dev server was started.
+Tests/scenarios: browser baseline on `main` reproduced the note leaving the viewport; browser journey on `3fc72a0` kept the note at `top=105`, focused, and holding its caret while the PDF band moved from `scrollTop=0` to `442` and the document stayed at `scrollY=0`. Prior `tsc --noEmit`, focused Biome lint, Vite build, `git show --check`, and targeted cross-check all passed. No test runner exists and no server was started this round.
 
-Configuration: ag.json — schema v7; validated for claude this round.
+Configuration: ag.json — schema v7; validated for codex this round.
 
-Proven: scrolling down a zoomed page moves only the page, so an unfinished note keeps its place, and the foot of a page taller than the window is reachable. A-007 `AGENTS.md` and `CLAUDE.md` guidance and the A-006 16px PDF gutter remain as recorded.
+Proven: in the live browser, scrolling a tall PDF moves only the PDF band; the unfinished note stays visible and retains focus and caret, and the foot of the page is reachable. A-007 `AGENTS.md` and `CLAUDE.md` guidance and the A-006 16px PDF gutter remain as recorded.
 
-Open: the A-008 runtime feel — scrollbar weight and the hand-off to the document when the page bottoms out — is an owner-side check, as is the A-006 gutter. The zoom-tracking note `minHeight` is parked as a proposal.
+Open: native wheel hand-off to the document after the PDF band bottoms out remains an owner-side feel check, as does the A-006 gutter. The zoom-tracking note `minHeight` remains parked as a proposal.
 
-Next: owner answers the three batched A-008 questions and reviews the PR.
+Next: owner reviews PR #4 and its browser-verified interaction.
 
-Artifacts: `.agentflow/A-008-cross-check-facts.json`, `.agentflow/A-008-cross-check-brief.md`, `.agentflow/A-008-cross-check-report.md`, and its dispatch facts; the A-006 and A-007 equivalents remain beside them.
+Artifacts: `C:\Users\User\.t3\userdata\browser-artifacts\browser-recording-mtwu685u.mp4`; `.agentflow/A-008-cross-check-facts.json`, brief, report, and dispatch facts; the A-006 and A-007 equivalents remain beside them.
 
 Archived eras: none.
 
@@ -1021,3 +1021,54 @@ You may use the previous browser to test the UX.
 - Baseline browser evidence on served `main`: the first PDF band is `sticky top-0`, 1,494 px tall in a 1,052 px viewport, with no vertical scroller. Scrolling the document from `scrollY=0` to `700` left the PDF pinned but moved the first note from `top=105` to `top=-595`, fully outside the viewport.
 - Browser constraint: the collaborative browser opened blank rather than retaining the prior tab, but an owner-started app is reachable on port 3000. No server or long-lived process was started.
 - Next work action: load the existing PR branch into that already-running app, repeat the same page/note measurements, and refine the fix only if the interaction remains wrong.
+
+## [RUN-002] Event (during round A-009)
+
+- Browser verification on implementation commit `3fc72a018b9c2c6462c390b74f256b5c17237d3f`: the first PDF band is capped to the 1,052 px viewport and has 442 px of internal vertical travel for the 1,494 px page.
+- Normal journey: focus the unfinished first-page note and place a collapsed caret at its end; scroll the PDF band by 300 px, then to its 442 px maximum. The band moves from `scrollTop=0` to `442`, while the document remains `scrollY=0`, the note stays at `top=105`, focus remains on that note, and the caret remains collapsed inside it.
+- Browser artifact: `C:\Users\User\.t3\userdata\browser-artifacts\browser-recording-mtwu685u.mp4` (268,535 bytes). The collaborative browser did not retain the prior tab, so the journey used its new tab against the already-running owner app on port 3000; no server was started.
+- Result: PASS. The existing PR #4 fix satisfies the owner outcome without another source adjustment. The checkout is back on `main`; the implementation branch remains clean and already pushed.
+- Next work action: close A-009 with the browser evidence, update STATUS, run final preflight, and push the main record commit.
+
+# ← Reply / A-009
+
+* _2026-09-11 18:52:20 +08:00 (gpt-5.6-sol/high)_
+
+## [SUMMARY]
+
+- The fix in PR #4 passes the real browser journey: scrolling a zoomed/tall PDF page no longer moves the unfinished note out of view.
+- The PDF now scrolls inside its own viewport-height band; the note stays visible, focused, and keeps its caret.
+- No new source adjustment was needed after the UX test.
+
+## [FINAL REPORT]
+
+### Your report: scrolling around a zoomed PDF pulls the note away
+
+Fixed in PR #4: https://github.com/xup60521/pdf-parallel-reader/pull/4
+
+I first reproduced the current behavior on `main`. In the loaded three-page document, the first PDF was 1,494 px tall in a 1,052 px viewport. Moving the document down 700 px kept the PDF pinned but moved the first note from `top=105` to `top=-595`, completely out of view.
+
+The PR changes the pinned PDF band into its own viewport-height vertical scroller. On the implementation branch I focused the first note, placed a collapsed caret at its end, and scrolled the PDF to the bottom of its 442 px internal range. The result was:
+
+- PDF band: `scrollTop 0 → 442`.
+- Document: stayed at `scrollY=0`.
+- Note: stayed at `top=105`.
+- Editing state: focus stayed on the note and the caret remained inside it.
+
+That is the intended interaction: you can zoom and read around the page without losing the unfinished note or your editing position.
+
+Browser recording: `C:\Users\User\.t3\userdata\browser-artifacts\browser-recording-mtwu685u.mp4` (268,535 bytes).
+
+The collaborative browser did not retain the earlier tab, so I opened a new tab against the already-running app on port 3000 and used the existing saved document. I did not start a server or any long-lived process.
+
+Implementation commit: `3fc72a018b9c2c6462c390b74f256b5c17237d3f`.
+
+## Questions (batched — each with a suggested default)
+
+- None.
+
+---
+
+# → Ask / A-010
+
++
