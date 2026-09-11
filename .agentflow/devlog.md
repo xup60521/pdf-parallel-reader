@@ -4,19 +4,19 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: main (origin/main) — A-007 documentation and record closeout are committed and pushed.
+Current commit: `fix/pdf-panel-vertical-scroll` — A-008 gives the pinned PDF band its own vertical scroll; delivery is the PR from that branch.
 
-Tests/scenarios: `git show --check baabf7e888e10761b9f737b27de926ec8e266598` passed. No application suite was rerun for this documentation-only round; A-006 TypeScript, build, diff, and cross-check evidence remains recorded below.
+Tests/scenarios: `tsc --noEmit` exit 0; `biome lint` clean on both changed paths; `vite build` succeeded and the emitted CSS carries `max-h-dvh`; `git show --check 3fc72a018b9c2c6462c390b74f256b5c17237d3f` passed. The repository has no test runner and no dev server was started.
 
-Configuration: ag.json — schema v7; validated for codex this round.
+Configuration: ag.json — schema v7; validated for claude this round.
 
-Proven: `AGENTS.md` and `CLAUDE.md` are added with repository guidance, committed, pushed, and independently reviewed. A-006 Fit/100% PDF pages still render with a 16px horizontal gutter on each side through the existing `PDF_PADDING` calculation.
+Proven: scrolling down a zoomed page moves only the page, so an unfinished note keeps its place, and the foot of a page taller than the window is reachable. A-007 `AGENTS.md` and `CLAUDE.md` guidance and the A-006 16px PDF gutter remain as recorded.
 
-Open: Live visual verification of the A-006 gutter remains an owner-side check. A-007 review observations are cosmetic owner-authored typos, an empty placeholder section, and the missing AGENTS.md trailing newline.
+Open: the A-008 runtime feel — scrollbar weight and the hand-off to the document when the page bottoms out — is an owner-side check, as is the A-006 gutter. The zoom-tracking note `minHeight` is parked as a proposal.
 
-Next: await the owner's next Ask.
+Next: owner answers the three batched A-008 questions and reviews the PR.
 
-Artifacts: `.agentflow/A-006-cross-check-facts.json`, `.agentflow/A-006-cross-check-brief.md`, `.agentflow/A-006-cross-check-report.md`, and its dispatch facts; A-007 facts, brief, report, dispatch facts, and closeout Reply are recorded in `.agentflow/devlog.md`.
+Artifacts: `.agentflow/A-008-cross-check-facts.json`, `.agentflow/A-008-cross-check-brief.md`, `.agentflow/A-008-cross-check-report.md`, and its dispatch facts; the A-006 and A-007 equivalents remain beside them.
 
 Archived eras: none.
 
@@ -922,5 +922,93 @@ Host gate: PASS.
 ---
 
 # → Ask / A-008
+
+godev
+When I actually use the app, the most annoying part is I sometimes need to zoom in pdf and scroll around, but the note panel scroll vertically as well, sometimes my unfinished-note leave the viewport, and I need to scroll back to take my note.
+
+## [RUN-001] Event (during round A-008)
+
+- Route: direct. Small, reversible, single-file reading-surface change in the main checkout; no stream opened (`streams: ask` question batched into the Reply).
+- Scope: vertical scrolling over the PDF panel must stop dragging the note column with it, so an unfinished note stays in the viewport while the page is zoomed and panned.
+- Evidence: `src/components/reader/ParallelReaderView.tsx:273` pins the page with `sticky top-0` inside a cell whose only scroller is the window, so every vertical wheel over the page moves the whole document — and a zoomed page taller than the viewport has an unreachable lower half, because a sticky box taller than the scrollport never moves once pinned.
+- Next work action: give the pinned band its own vertical scroll, then run typecheck, lint, and build.
+
+## [RUN-002] Event (during round A-008)
+
+- Implementation unit: `3fc72a018b9c2c6462c390b74f256b5c17237d3f` on `fix/pdf-panel-vertical-scroll` — the pinned band becomes `max-h-dvh overflow-y-auto` (with `overflow-x-clip` restated so the axis coupling cannot grow a second horizontal scrollbar), and `.pdf-scroll::-webkit-scrollbar` gains `width: 15px` so the new vertical bar matches the existing horizontal one.
+- Changed paths match the expected paths exactly: `src/components/reader/ParallelReaderView.tsx` and `src/styles.css`; the devlog is separate record work.
+- Evidence: `tsc --noEmit` exit 0; `biome lint` on both paths clean (`biome check`'s CRLF complaint reproduces on untouched files, so it is the checkout's `core.autocrlf`, not this change); `vite build` succeeded and the emitted CSS contains `max-h-dvh{max-height:100dvh}`; `git show --check` passed. No test runner exists in this repository and no dev server was started.
+- Cross-check: `cross-check-plan.js` selected `targeted`; the independent review returned `Outcome/Minimality/Conformance/Verdict: PASS` with `clone.changed=false`. Host gate: PASS.
+- Next work action: write the Reply, update STATUS, run preflight, then push the branch and open the PR.
+
+# ← Reply / A-008
+
+* _2026-09-11 18:02:00 (claude-opus-5/high)_
+
+## [SUMMARY]
+
+- The page band now scrolls on its own, so reading down a zoomed page no longer drags the note column away from the caret.
+- The same change makes the foot of a tall or zoomed page reachable at all — a pinned sticky box taller than the window never moved again, so the lower part of a zoomed page was previously unreachable.
+- Typecheck, lint, build, and an independent targeted review all pass; the visual check is yours, on the branch `fix/pdf-panel-vertical-scroll`.
+
+## [FINAL REPORT]
+
+### Your report: zooming the PDF and scrolling around takes the unfinished note out of view
+
+Fixed, pending your look at it.
+
+The cause is in `src/components/reader/ParallelReaderView.tsx`. A row is two grid cells — page and note — and the page is pinned with `position: sticky; top: 0` inside its cell. Nothing in that row was a scroll container of its own, so the only vertical scroll available anywhere in the reader was the window's. Moving down a zoomed page and moving the note column were the same gesture; there was no way to do one without the other.
+
+There is a second half to this that your message describes as "scroll around". A sticky box taller than the scrollport stops moving the moment it pins: its top sits at 0 and stays there. At 100% the fitted page is usually a little shorter than the window, so this never shows. Zoom to 200% and the page is roughly twice the window's height — and the bottom half could not be brought into view by any amount of scrolling.
+
+The fix is one change that answers both: the pinned band is now at most one viewport tall and carries its own vertical scroll.
+
+```
+<div className="pdf-scroll sticky top-0 max-h-dvh overflow-x-clip overflow-y-auto">
+```
+
+- A vertical wheel over the page scrolls the page inside its band. The note column does not move, so an unfinished note stays where you left it.
+- The whole page is now reachable at any zoom.
+- When the band runs out — the page is fully scrolled, or it is short enough not to scroll at all — the scroll passes through to the document as before, so you can still move between pages with the pointer over the page side.
+- `overflow-x: clip` is restated on that element on purpose: a box that scrolls on one axis turns a `visible` sibling axis into `auto`, which would have grown a second horizontal scrollbar next to the shared one at the foot of the column.
+
+`src/styles.css` adds `width: 15px` to the existing `.pdf-scroll::-webkit-scrollbar` rule so the band's new vertical scrollbar is drawn like the horizontal one already there. The horizontal strip cannot show a vertical bar, so it is untouched.
+
+Nothing else changed: the fit/zoom model, the shared sideways pan, the stacked narrow-window layout, the wheel handlers, and the page-tracking observers are all as they were.
+
+### Verification and limits
+
+- `./node_modules/.bin/tsc.exe --noEmit` — exit 0.
+- `./node_modules/.bin/biome.exe lint src/components/reader/ParallelReaderView.tsx src/styles.css` — clean. `biome check` reports a CRLF formatting error, but it reproduces on files this round never touched (`src/components/reader/PageRail.tsx`), so it is this checkout's `core.autocrlf=true`, not the change. I left it alone rather than reformatting the repository.
+- `vite build` — succeeded in 4.14s; the emitted CSS contains `max-h-dvh{max-height:100dvh}` and `overflow-y-auto{overflow-y:auto}`, so the utilities really are in the bundle.
+- `git show --check 3fc72a018b9c2c6462c390b74f256b5c17237d3f` — passed.
+- Independent targeted cross-check: `Outcome: PASS`, `Minimality: PASS`, `Conformance: PASS`, `Verdict: PASS`, in an independent clone with no remotes and no clone changes. It specifically checked that the sticky pin, the shared horizontal pan, the wheel handler, the stacked branch, the intersection observers, and the text-layer selection all survive. Host gate: PASS.
+- Limit: this repository has no test runner, and no dev server was started. Whether the feel is right — scrollbar weight, how the hand-off to the document reads when the page bottoms out — is a runtime check only you can make.
+
+Cross-check review: `.agentflow/A-008-cross-check-report.md`
+Cross-check implementation: 3fc72a018b9c2c6462c390b74f256b5c17237d3f
+Host gate: PASS.
+
+### One thing I noticed and did not do
+
+At high zoom the note cell still reserves the full height of the page (`minHeight: reservedHeight - 40`), so a 300% page leaves roughly two screens of empty paper under the note before the next page. With the band now capped at one viewport, that reservation buys nothing. Shrinking it would make a zoomed document much shorter to scroll through — but it is a separate behavior change, so it stays a proposal.
+
+## Questions (batched — each with a suggested default)
+
+- When the band bottoms out, should the scroll keep passing through to the document (what I shipped), or stop dead so the page side never moves the note under any circumstance?
+- Suggested default: keep the pass-through — it is the browser's own behavior, and stopping dead means you could not scroll the document at all with the pointer over the page.
+- ans:
+
+- Should the reserved note height stop tracking zoom, so a zoomed document is not padded out with empty paper?
+- Suggested default: yes, as its own small round.
+- ans:
+
+- `streams: ask` is set, and this was a code change. I did it directly in the main checkout on a branch rather than opening a worktree stream, since it is one file's worth of work. Keep doing that for small fixes?
+- Suggested default: yes — reserve streams for work large enough to run in parallel.
+- ans:
+
+---
+
+# → Ask / A-009
 
 +
