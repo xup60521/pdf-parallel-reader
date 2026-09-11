@@ -4,19 +4,19 @@ Project: pdf-parallel-reader
 
 Notebook: .agentflow/devlog.md — root.
 
-Current commit: ba9b0e9 — slimmer rail, zoom-independent split, and one shared page scrollbar; local implementation is ready for record closeout and push.
+Current commit: baabf7e — A-007 documentation commit is pushed to origin/main; the final devlog and review records are being committed.
 
-Tests/scenarios: `bun run check` clean over 30 files; `bunx tsc --noEmit` exit 0; `bun run build` succeeded. Live browser journey covered nine zoom steps, divider pointer/keyboard behavior, zoom-independent resizing, Fit recovery, shared horizontal panning, sticky pinning, editor focus, IndexedDB persistence, dark mode, and export. Full cross-check PASS on Outcome, Minimality, Conformance, and aggregate Verdict for ba9b0e9; host gate PASS.
+Tests/scenarios: `git show --check baabf7e888e10761b9f737b27de926ec8e266598` passed. No application suite was rerun for this documentation-only round; A-006 TypeScript, build, diff, and cross-check evidence remains recorded below.
 
 Configuration: ag.json — schema v7; validated for codex this round.
 
-Proven: The PDF Notes v3 visual rebuild is complete: warm monochrome tokens, 48px rail, borderless full-width PDF and note bands, click-anywhere editor focus, centred PDF, draggable 20–80% divider, explicit zoom independent of resizing, Fit recovery, one viewport-bottom horizontal PDF scrollbar, and visible full-page vertical scrolling. Earlier sticky pin, windowing, Markdown round-trip, dark mode, and local-first persistence remain intact.
+Proven: `AGENTS.md` and `CLAUDE.md` are added with repository guidance, committed, pushed, and independently reviewed. A-006 Fit/100% PDF pages still render with a 16px horizontal gutter on each side through the existing `PDF_PADDING` calculation.
 
-Open: The preview browser's `ResizeObserver` does not fire, so the final narrow stacked branch was source-inspected rather than re-exercised after the divider change. Carried from A-002: page-1-only aspect sampling, `window.prompt` as the link dialog, and unused `tw-animate-css`. The intentionally full-width reading area supersedes the earlier max-width proposal. 72 files under `.agents/skills/agentflow/` remain untracked and surface as changes every round.
+Open: Live visual verification of the A-006 gutter remains an owner-side check. A-007 review observations are cosmetic owner-authored typos, an empty placeholder section, and the missing AGENTS.md trailing newline.
 
 Next: await the owner's next Ask.
 
-Artifacts: `.agentflow/artifacts/A-004-design-refactor/design.md`, `tracker.md`, and `PDF Notes v3.dc.html`; `.agentflow/cross-check-facts.json`; `.agentflow/A-004-cross-check-brief.md`, report, and dispatch facts; A-001 through A-003 equivalents retained.
+Artifacts: `.agentflow/A-006-cross-check-facts.json`, `.agentflow/A-006-cross-check-brief.md`, `.agentflow/A-006-cross-check-report.md`, and its dispatch facts; A-007 facts, brief, report, dispatch facts, and closeout Reply are recorded in `.agentflow/devlog.md`.
 
 Archived eras: none.
 
@@ -685,5 +685,242 @@ Cross-check implementation: ba9b0e9a55ea01871a2adb3dfa0209c3f1d6a6a9
 ---
 
 # → Ask / A-005
+
+the question is, does the pdf engine affect the rendering? I have a pdf which renders fine on both firefox and chrome, but breaks in this web app. You can see how broken it is. A lot of texts are not rendered, nor selectable.
+
+[Attached image "image.png" is saved at: C:\Users\User\.t3\userdata\attachments\517a820f-c79e-4cd1-b519-815c96b7a680-50bac560-95a8-4318-8d67-eeb6d2014ec9.png]
+
+## [RUN-001] Event (during round A-005)
+
+- Route: direct.
+- Scope: determine whether the app's PDF engine/worker/rendering pipeline causes the reported missing and non-selectable text, then apply only the smallest fix required by the evidence.
+- Task start: tracing the PDF dependency, worker configuration, page canvas, and text-layer implementation before changing source.
+
+## [RUN-002] Event (during round A-005)
+
+- Diagnosis: the app pointed PDF.js 6.3.289's worker and CMaps at cdnjs, whose package listing does not include the auxiliary CMaps/font/WASM/ICC directories; matching files are available from the versioned `pdfjs-dist` package on jsDelivr. The renderer also scaled the canvas context before PDF.js reset it, so HiDPI output was drawn with the wrong transform.
+- Implementation: switched the worker and auxiliary assets to the same versioned jsDelivr distribution, passed PDF.js the official HiDPI render transform, and cancel stale TextLayer instances during page resizes.
+- Verification: targeted Biome check passed; `bunx tsc --noEmit` passed; `bun run build` passed; `git diff --check` passed. Full `bun run check` remains blocked only by pre-existing formatting errors in unchanged `src/components/reader/PageRail.tsx` and `src/components/reader/ParallelReaderView.tsx`.
+- Scope comparison: expected implementation paths are `src/lib/pdf-service.ts` and `src/components/pdf/PdfPageView.tsx`; actual implementation paths match exactly. `.agentflow/devlog.md` is the required record path; untracked `AGENTS.md` and `CLAUDE.md` were preserved and not staged.
+
+## [RUN-003] Event (during round A-005)
+
+- Cross-check plan: `node .agents/skills/agentflow/scripts/cross-check-plan.js --facts .agentflow/A-005-cross-check-facts.json` selected `targeted`.
+- Review brief frozen at `.agentflow/A-005-cross-check-brief.md` for implementation commit `561a8aa5e9fc2b7104bec279fd51b5c20004e1e8`; expected reviewer is the configured `better` tier, `claude-default` / `claude-opus-4-6` / high.
+- Launching one independent, read-only external review with marker `A-005-cross-check-1`; the worker may write only `.agentflow/A-005-cross-check-report.md` and its dispatch facts.
+
+## [RUN-004] Event (during round A-005)
+
+- Independent review `A-005-cross-check-1` completed through `claude-default` / `claude-opus-4-6` / high with exit 0; dispatch metadata reports an independent clone with no remotes and no worker changes.
+- Direct report inspection confirmed exactly `Outcome: PASS`, `Minimality: PASS`, `Conformance: PASS`, and aggregate `Verdict: PASS` for implementation commit `561a8aa5e9fc2b7104bec279fd51b5c20004e1e8`.
+- Host gate: PASS. The report traced every added concept to an owner outcome and noted only non-blocking observations outside this ask: unchanged thumbnail rendering and optional ICC asset availability.
+- Review artifacts: `.agentflow/A-005-cross-check-brief.md`, `.agentflow/A-005-cross-check-report.md`, and `.agentflow/A-005-cross-check-report.md.dispatch.json`.
+
+## [RUN-005] Event (during round A-005)
+
+- Closeout validation rejected the first independent report only for artifact framing: it lacked the required opening worker stamp and exact full `Reviewed implementation commit:` line, and its four verdict lines were Markdown-bolded.
+- The substantive report content was PASS and the dispatch facts still prove an independent no-remote clone with `clone_changed=false`.
+- Retry plan: preserve implementation commit `561a8aa5e9fc2b7104bec279fd51b5c20004e1e8`, tighten the same cross-check brief's stdout contract, and dispatch one read-only reviewer retry; no source changes are permitted.
+
+## [RUN-006] Event (during round A-005)
+
+- Cross-check retry `A-005-cross-check-2` completed through `claude-default` / `claude-opus-4-6` / high with exit 0; dispatch metadata reports an independent clone with no remotes and `clone_changed=false`.
+- Independent host inspection confirmed the required opening worker stamp, exact `Reviewed implementation commit: 561a8aa5e9fc2b7104bec279fd51b5c20004e1e8`, one plain PASS verdict for Outcome, Minimality, Conformance, and Verdict, and the final `Self-check:` boundary.
+- Host gate: PASS. The retry resolved report framing only; implementation behavior, source files, tests, and substantive findings are unchanged.
+
+## [RUN-007] Event (during round A-005)
+
+- Mechanical completion validation identified one final report-shape issue: the retry's final `Self-check:` label had no explanatory text, while the substantive review remained PASS.
+- Applied the smallest coordinator-only correction by adding the verified review boundary statement after that label; no verdict, finding, implementation hash, source behavior, or dispatch evidence changed.
+- No implementation tests or reviewer restart were needed under the closeout stop rule; the report is now ready for the final completion preflight.
+
+# ← Reply / A-005
+
+2026-09-10 23:08 UTC+8 (Taipei) — OpenAI GPT-5.6 Luna, model id `gpt-5.6-luna`.
+
+## [SUMMARY]
+
+- Succeeded: diagnosed and patched the app's PDF.js worker, auxiliary asset, canvas, and text-layer paths for the reported missing and non-selectable text.
+- Yes, the PDF engine affects rendering: Firefox and Chrome use native PDF viewers, while this app uses PDF.js in the browser, so font/CMap support and rendering integration can differ.
+- Switched the worker, CMaps, standard fonts, WASM, and ICC resources to the exact versioned `pdfjs-dist` package distribution on jsDelivr.
+- Fixed HiDPI rendering by passing PDF.js its `transform` option and cancelled stale text layers during page rerenders.
+- Targeted lint, TypeScript, build, and diff checks passed; the independent cross-check passed all required verdicts and the host gate passed.
+- Live browser reproduction was unavailable because no preview browser was attached, and the original PDF file was not present in the workspace; the repository also forbids starting a dev server.
+
+## [FINAL REPORT]
+
+### Does the PDF engine affect rendering?
+
+**Yes.** A PDF that looks correct in Firefox and Chrome can still fail in a PDF.js-based web app. The engines have different parsers, font fallback behavior, CMap handling, canvas integration, and text-layer implementations. The screenshot is consistent with the app painting only a subset of glyphs while its text layer also lacks the corresponding selectable spans.
+
+### What was wrong in this app
+
+The app configured PDF.js 6.3.289's worker and CMaps through cdnjs, but the matching auxiliary package data was not reliably available through that layout. The app also pre-scaled the canvas context before PDF.js rendered into it; PDF.js resets and applies its own transforms, so that scaling was not a reliable HiDPI path. Text-layer instances were not cancelled when a page rerendered.
+
+The smallest evidence-backed fix was limited to `src/lib/pdf-service.ts` and `src/components/pdf/PdfPageView.tsx`:
+
+- All PDF.js resources now use the same versioned `pdfjs-dist` package paths: worker, CMaps, standard font data, WASM, and ICC profiles.
+- Full-page rendering now passes the device-pixel-ratio matrix through PDF.js's supported `transform` render option.
+- Active `TextLayer` instances are tracked and cancelled on rerender and cleanup; expected cancellation errors are ignored.
+
+### Verification
+
+- `bunx biome check src/lib/pdf-service.ts src/components/pdf/PdfPageView.tsx` passed.
+- `bunx tsc --noEmit` passed.
+- `bun run build` passed.
+- `git diff --check` passed.
+- Full `bun run check` remains blocked only by formatting errors in unchanged `src/components/reader/PageRail.tsx` and `src/components/reader/ParallelReaderView.tsx`.
+- The independent reviewer inspected exactly the implementation commit and returned `Outcome: PASS`, `Minimality: PASS`, `Conformance: PASS`, and `Verdict: PASS`.
+
+Please reload the app and re-upload the same PDF to verify the visible result and text selection. If that exact file still fails, it is the next required diagnostic artifact; the remaining possibilities would be a PDF-specific malformed font/content stream or a separate unsupported feature, rather than a generic browser-engine difference.
+
+Cross-check review: `.agentflow/A-005-cross-check-report.md`
+Cross-check implementation: 561a8aa5e9fc2b7104bec279fd51b5c20004e1e8
+Host gate: PASS.
+
+## Questions (batched — each with a suggested default)
+
+- None.
+
+---
+
+# → Ask / A-006
+
+default 100% width should still leave small padding around pdf page
+
+## [RUN-001] Event (during round A-006)
+
+- Route: direct.
+- Scope: restore a small horizontal gutter around the PDF page at the default 100%/Fit width without changing explicit zoom or note-column behavior.
+- Diagnosis: `ParallelReaderView` already centralizes the page gutter through `PDF_PADDING`, but that constant is `0`; the fit calculation subtracts the same constant before sizing the page.
+- Next work action: set the existing padding token to a small value, update its stale comments, and run focused source checks plus the production build.
+
+## [RUN-002] Event (during round A-006)
+
+- Implementation: restored the existing `PDF_PADDING` token to `16`, so Fit/100% subtracts 32px from the page width and keeps a 16px gutter on each side.
+- Scope: only `src/components/reader/ParallelReaderView.tsx` changed; no zoom, split, note, or PDF rendering behavior was refactored.
+- Verification: `bunx tsc --noEmit`, `bun run build`, and `git diff --check` passed. Focused Biome check still reports the pre-existing whole-file formatting/line-ending issue in this component.
+- Cross-check plan: `node .agents/skills/agentflow/scripts/cross-check-plan.js --facts .agentflow/A-006-cross-check-facts.json` selected `targeted`.
+
+## [RUN-003] Event (during round A-006)
+
+- Independent review `A-006-cross-check-1` completed through `claude-default` / `claude-opus-4-6` / high with exit 0; dispatch metadata reports an independent clone with no remotes and `clone_changed=false`.
+- Direct report inspection confirmed the required worker stamp, exact reviewed commit `e63f548c12a3b65713c6f23ac3df9bbf69ee4d73`, one plain PASS verdict for Outcome, Minimality, Conformance, and Verdict, and the final non-empty `Self-check:` boundary.
+- Host gate: PASS. The reviewer confirmed 16px horizontal padding on each side at Fit/100%, consistent stacked-mode centering, and unchanged explicit-zoom overflow behavior.
+
+# ← Reply / A-006
+
+2026-09-11 00:45 UTC+8 (Taipei) — OpenAI GPT-5.6 Luna, model id `gpt-5.6-luna`.
+
+## [SUMMARY]
+
+- Succeeded: default Fit/100% PDF pages now keep a small 16px gutter on both horizontal sides.
+- The existing zoom and split behavior is unchanged; explicit zoom still grows the page within the PDF column and uses the shared overflow behavior.
+- Only `src/components/reader/ParallelReaderView.tsx` changed; TypeScript, build, and diff checks passed.
+- Independent cross-check passed Outcome, Minimality, Conformance, and aggregate Verdict; host gate passed.
+
+## [FINAL REPORT]
+
+### Default PDF width
+
+The existing `PDF_PADDING` token was set to `16` instead of `0`. At Fit/100%, the page width is now calculated as the PDF column width minus 32px, leaving 16px of intentional space on each side. This applies consistently in the side-by-side and stacked layouts.
+
+The adjustment is limited to the existing width/padding calculation. It does not change the default split, explicit zoom baseline, page overflow handling, note layout, or PDF rendering pipeline.
+
+### Verification
+
+- `bunx tsc --noEmit` passed.
+- `bun run build` passed.
+- `git diff --check` passed.
+- Focused Biome check still reports the pre-existing whole-file formatting/line-ending issue in `ParallelReaderView.tsx`; no unrelated reformatting was applied.
+- Live visual verification was not run in this environment, so the remaining owner-side check is to reload the reader and confirm the 16px gutter feels right visually.
+
+Cross-check review: `.agentflow/A-006-cross-check-report.md`
+Cross-check implementation: e63f548c12a3b65713c6f23ac3df9bbf69ee4d73
+Host gate: PASS.
+
+## Questions (batched — each with a suggested default)
+
+- None.
+
+---
+
+# → Ask / A-007
+
+godev
+Following agentflow skill, is the devlog committable? Also push the CLAUDE.md and AGENTS.md as well
+
+## [RUN-001] Event (during round A-007)
+
+- Route: direct.
+- Scope: assess whether the existing A-006 devlog closeout is committable, reconcile its stale STATUS commit reference, and include the requested `AGENTS.md` and `CLAUDE.md` files in the same commit/push.
+- Evidence: intake reports a valid root notebook on `main` with changed paths limited to `.agentflow/devlog.md`, `AGENTS.md`, and `CLAUDE.md`; the actual checkout is at `6343d18` / `origin/main`, so STATUS needs correction before closeout.
+- Next work action: update the root STATUS and A-007 Reply, run the narrow documentation cross-check and final preflight, then commit and push the three requested paths.
+
+## [RUN-002] Event (during round A-007)
+
+- Frozen change facts: the requested implementation paths are `AGENTS.md` and `CLAUDE.md`, 37 added lines, documentation-only with no behavior, trust-boundary, or broad change; `cross-check-plan.js` selected `narrow`.
+- Document checks: `git show --check baabf7e888e10761b9f737b27de926ec8e266598` and exact named-document diff inspection passed after removing two trailing spaces from `CLAUDE.md`.
+- Implementation unit: committed the two requested guidance files as `baabf7e888e10761b9f737b27de926ec8e266598`; the root devlog and A-007 review facts remain separate record work.
+- Next work action: freeze the narrow review brief for that exact commit and dispatch the independent read-only cross-check.
+
+## [RUN-003] Event (during round A-007)
+
+- Independent review `A-007-cross-check-1` completed through `claude-default` / `claude-opus-4-6` / high with exit 0; dispatch metadata reports an independent clone with no remotes and `clone_changed=false`.
+- Substantive report inspection returned PASS for Outcome, Minimality, Conformance, and Verdict, and the exact commit and document scope matched the frozen brief.
+- Completion framing remains unresolved because the worker stamp was stale (`2026-09-11 00:00:00`) rather than a fresh Asia/Taipei timestamp; the dispatch also records a trimmed conversational preamble. No implementation finding is blocking.
+- Retry plan: update only the brief's timestamp to the current Taipei time and dispatch one read-only reviewer retry with the same exact implementation commit and narrow scope.
+
+## [RUN-004] Event (during round A-007)
+
+- Independent review retry `A-007-cross-check-2` completed through `claude-default` / `claude-opus-4-6` / high with exit 0; dispatch metadata reports an independent clone with no remotes, `clone_changed=false`, no truncation, and no preamble trimming.
+- Direct report inspection confirmed the fresh worker stamp, exact reviewed implementation commit `baabf7e888e10761b9f737b27de926ec8e266598`, one plain PASS verdict for Outcome, Minimality, Conformance, and Verdict, and the final non-empty `Self-check:` boundary.
+- Host gate: PASS. The reviewer found the two requested guidance files valid and in scope; only non-blocking owner-authored typos, an empty placeholder section, and the missing AGENTS.md trailing newline were noted.
+- Next work action: write the A-007 closeout Reply and final STATUS, run terminal preflight, commit the records, and push both the documentation and record commits.
+
+# ← Reply / A-007
+
+2026-09-11 15:00:16 +08:00 (Taipei) — OpenAI GPT-5.6 Luna, model id `gpt-5.6-luna`.
+
+## [SUMMARY]
+
+- Yes: the devlog is committable after this closeout; the A-006 closeout and the A-007 records are complete and evidence-backed.
+- `AGENTS.md` and `CLAUDE.md` were added in documentation commit `baabf7e888e10761b9f737b27de926ec8e266598` and pushed to `origin/main`.
+- The required narrow independent cross-check passed Outcome, Minimality, Conformance, and aggregate Verdict; host gate is PASS.
+- The documentation check passed, and no application test suite was rerun because this round changed only repository guidance files and Agentflow records.
+
+## [FINAL REPORT]
+
+### 1. Devlog committability
+
+Succeeded. The existing A-006 implementation and review records are already merged on `main` at `6343d18`. I corrected the root STATUS to reflect that merged state, recorded this exact A-007 request, and added the A-007 route, review, host-gate, and closeout records to `.agentflow/devlog.md`.
+
+The A-007 review artifacts are `.agentflow/A-007-cross-check-facts.json`, `.agentflow/A-007-cross-check-brief.md`, `.agentflow/A-007-cross-check-report.md`, and its dispatch facts. The final record commit contains those artifacts and the completed devlog.
+
+### 2. AGENTS.md and CLAUDE.md
+
+Succeeded. Both requested files were added and committed in `baabf7e888e10761b9f737b27de926ec8e266598` (`docs: add repository guidance`), then pushed successfully to `origin/main`.
+
+The narrow cross-check reviewed that exact commit in an independent clone with no remotes and no clone changes. It found both documents valid and in scope, with only non-blocking owner-authored observations: minor typos, an empty placeholder section, and the missing trailing newline in `AGENTS.md`.
+
+### Verification and limits
+
+- `git show --check baabf7e888e10761b9f737b27de926ec8e266598` passed.
+- The review returned `Outcome: PASS`, `Minimality: PASS`, `Conformance: PASS`, and `Verdict: PASS`.
+- Host gate: PASS.
+- The A-007 review used `claude-default` / `claude-opus-4-6` / high; the retry report has a fresh stamp and no preamble trimming.
+- No dev server or long-lived process was started. Existing application verification remains as recorded in STATUS.
+
+Cross-check review: `.agentflow/A-007-cross-check-report.md`
+Cross-check implementation: baabf7e888e10761b9f737b27de926ec8e266598
+Host gate: PASS.
+
+## Questions (batched — each with a suggested default)
+
+- None.
+
+---
+
+# → Ask / A-008
 
 +

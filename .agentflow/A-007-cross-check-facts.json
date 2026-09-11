@@ -1,0 +1,12 @@
+{
+  "changed_files": [
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "changed_lines": 37,
+  "behavior_change": false,
+  "trust_boundary": false,
+  "broad_change": false,
+  "consequential_change": false,
+  "owner_control": "default"
+}
